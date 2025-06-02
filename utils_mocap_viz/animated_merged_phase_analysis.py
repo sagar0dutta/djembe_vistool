@@ -4,7 +4,7 @@ import matplotlib
 matplotlib.use('Agg')  # Use non-interactive backend
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
-from plot_func.gen_distribution_single_plots import load_cycles, load_onsets, find_cycle_phases, kde_estimate
+from utils_subdivision.gen_distribution_single_plots import load_cycles, load_onsets, find_cycle_phases, kde_estimate
 
 def analyze_phases_no_plot(cycles_csv_path, onsets_csv_path, onset_type, W_start, W_end, SIG=0.01):
     """Perform phase analysis without showing any plots.
@@ -129,9 +129,18 @@ def animate_merged_phase_analysis(file_name, W_start, W_end, cycles_csv_path, on
     
     # Set x,y-axis limits and ticks
     ax.set_xlim(-0.1, 1.0)
+    xticks = [0, 0.25, 0.5, 0.75, 1]
+    ax.set_xticks(xticks) 
+    
     ax.set_ylim(-0.55, 1.0)
     yticks = np.arange(0, 1.1, 0.2)
     ax.set_yticks(yticks)
+    
+    # Draw vertical lines at each subdivision i/12
+    ymin, ymax = ax.get_ylim()
+    for subdiv  in range(1, 13):
+        xpos = (subdiv - 1) / 12    # subdiv 1 → 0.0, subdiv 4 → 0.25, etc.
+        ax.vlines(xpos, ymin, ymax, color=get_subdiv_color(subdiv), linewidth=1)
     
     # Add grid
     ax.grid(True, alpha=0.3)
@@ -191,7 +200,7 @@ def animate_merged_phase_analysis(file_name, W_start, W_end, cycles_csv_path, on
         print(f"\nSaving animation to: {save_fname}")
         try:
             # Save animation as MP4
-            writer = animation.FFMpegWriter(fps=20, bitrate=2000)
+            writer = animation.FFMpegWriter(fps=24, bitrate=2000)
             anim.save(save_fname, writer=writer)
             plt.close(fig)  # Explicitly close the figure
             print("Animation saved successfully!")
@@ -204,3 +213,11 @@ def animate_merged_phase_analysis(file_name, W_start, W_end, cycles_csv_path, on
     
     return anim
 
+def get_subdiv_color(subdiv):
+    if subdiv in [1, 4, 7, 10]:
+        return 'black'
+    elif subdiv in [2, 5, 8, 11]:
+        return 'green'
+    elif subdiv in [3, 6, 9, 12]:
+        return 'red'
+    return 'gray'

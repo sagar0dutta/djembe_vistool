@@ -4,7 +4,7 @@ import matplotlib
 matplotlib.use('Agg')  # Use non-interactive backend
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
-from plot_func.gen_distribution_single_plots import load_cycles, load_onsets, find_cycle_phases, kde_estimate
+from utils_subdivision.gen_distribution_single_plots import load_cycles, load_onsets, find_cycle_phases, kde_estimate
 
 # Define onset types and their corresponding colors
 ONSET_TYPES = ['Dun', 'J1', 'J2']
@@ -106,8 +106,19 @@ def animate_phase_analysis(file_name, W_start, W_end, cycles_csv_path, onsets_cs
     # Add title
     ax.set_title(f'File: {file_name} | Window: {W_start:.1f}s - {W_end:.1f}s | Onset: {onset_type}')
     
-    # Set y-axis limits
+    # Set x, y-axis limits
+    ax.set_xlim(-0.1, 1.0)
+    xticks = [0, 0.25, 0.5, 0.75, 1]
+    ax.set_xticks(xticks)
     ax.set_ylim(-0.55, 1.0)  # Exact limits: -0.55 to 1.0
+    
+    # Draw vertical lines at each subdivision i/12
+    ymin, ymax = ax.get_ylim()
+    for subdiv  in range(1, 13):
+        xpos = (subdiv - 1) / 12    # subdiv 1 → 0.0, subdiv 4 → 0.25, etc.
+        ax.vlines(xpos, ymin, ymax, color=get_subdiv_color(subdiv), linewidth=1)
+    
+    
     
     # Customize y-axis ticks to only show positive values
     yticks = np.arange(0, 1.1, 0.2)  # Generate ticks from 0 to 1
@@ -209,30 +220,43 @@ def generate_all_animations(file_name, W_start, W_end, cycles_csv_path, onsets_c
         except Exception as e:
             print(f"Error generating animation for {onset_type}: {str(e)}")
 
-if __name__ == "__main__":
-    # Example usage
-    file_name = "BKO_E1_D1_02_Maraka"
-    cycles_csv_path = f"virtual_cycles/{file_name}_C.csv"
-    onsets_csv_path = f"drum_onsets/{file_name}.csv"
-    W_start = 70
-    W_end = 100  # Using a 5-second window
+
+def get_subdiv_color(subdiv):
+    if subdiv in [1, 4, 7, 10]:
+        return 'black'
+    elif subdiv in [2, 5, 8, 11]:
+        return 'green'
+    elif subdiv in [3, 6, 9, 12]:
+        return 'red'
+    return 'gray'
+
+
+
+
+# if __name__ == "__main__":
+#     # Example usage
+#     file_name = "BKO_E1_D1_02_Maraka"
+#     cycles_csv_path = f"virtual_cycles/{file_name}_C.csv"
+#     onsets_csv_path = f"drum_onsets/{file_name}.csv"
+#     W_start = 70
+#     W_end = 100  # Using a 5-second window
     
-    # Set figure size and DPI
-    figsize = (10, 3)  # Same as phase_analysis.py
-    dpi = 150
+#     # Set figure size and DPI
+#     figsize = (10, 3)  # Same as phase_analysis.py
+#     dpi = 150
     
-    # Save directory for the animations
-    save_dir = "phase_analysis_animations"
+#     # Save directory for the animations
+#     save_dir = "phase_analysis_animations"
     
-    print(f"Starting phase analysis for {file_name}")
-    print(f"Window: {W_start}s - {W_end}s")
+#     print(f"Starting phase analysis for {file_name}")
+#     print(f"Window: {W_start}s - {W_end}s")
     
-    try:
-        generate_all_animations(
-            file_name, W_start, W_end,
-            cycles_csv_path, onsets_csv_path,
-            save_dir=save_dir,
-            figsize=figsize, dpi=dpi
-        )
-    except Exception as e:
-        print(f"Error during animation generation: {str(e)}") 
+#     try:
+#         generate_all_animations(
+#             file_name, W_start, W_end,
+#             cycles_csv_path, onsets_csv_path,
+#             save_dir=save_dir,
+#             figsize=figsize, dpi=dpi
+#         )
+#     except Exception as e:
+#         print(f"Error during animation generation: {str(e)}") 

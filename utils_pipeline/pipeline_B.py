@@ -32,7 +32,7 @@ def find_and_load_pickle(traj_dir, base_name, status, value):
     for fname in os.listdir(traj_dir):
         if not fname.lower().endswith(".pkl"):
             continue
-        name_no_ext = fname[:-4]  # remove “.pkl”
+        name_no_ext = fname[:-4]  # remove ".pkl"
         parts = name_no_ext.split("_")
         if len(parts) >= 3 and parts[-2] == status and parts[-1] == value_str:
             candidate_base = "_".join(parts[:-2])
@@ -421,8 +421,21 @@ def concatenate_and_overlay_videos(file_name, save_dir):
     video_list = os.path.join(save_dir, "video_list.txt")
     plot_list = os.path.join(save_dir, "plot_list.txt")
     
-    create_concat_file(video_dir, video_list, f"{file_name}_cycle_")
-    create_concat_file(plot_dir, plot_list, f"{file_name}_cycle_")
+    # Check if directories exist
+    if not os.path.exists(video_dir):
+        print(f"Video directory not found: {video_dir}")
+        return
+    if not os.path.exists(plot_dir):
+        print(f"Plot directory not found: {plot_dir}")
+        return
+        
+    # Check if text files already exist
+    if os.path.exists(video_list) and os.path.exists(plot_list):
+        print("Concatenation files already exist, skipping creation")
+    else:
+        print("Creating concatenation files...")
+        create_concat_file(video_dir, video_list, f"{file_name}_cycle_")
+        create_concat_file(plot_dir, plot_list, f"{file_name}_cycle_")
     
     # Concatenate cycle videos
     concat_video = os.path.join(save_dir, "concatenated_video.mp4")
@@ -463,4 +476,115 @@ def concatenate_and_overlay_videos(file_name, save_dir):
 
     
     print(f"Concatenated plot saved: {concat_plot}")
-    print(f"\nConcatenated video saved: {concat_video}")
+    print(f"Concatenated video saved: {concat_video}\n")
+    
+def combine_trajectory_views(
+    filename,
+    output_dir,
+    view_videos,
+    layout_config=None,
+    video_size=(1280, 720),
+    fps=24
+):
+    """Combine two videos vertically with the first video on top and second on bottom
+    
+    Args:
+        filename: Base filename for output
+        output_dir: Directory to save the output video
+        view_videos: Dictionary with two video paths
+        layout_config: List of dictionaries defining the layout structure
+        video_size: Overall output video size (width, height)
+        fps: Target frame rate for output video
+    """
+    # Get the two video paths
+    video_paths = list(view_videos.values())
+    if len(video_paths) != 2:
+        raise ValueError("Expected exactly two videos to combine")
+    
+    # Get dimensions from layout
+    if layout_config and len(layout_config) == 2:
+        width = layout_config[0]['width']
+        height = layout_config[0]['height']
+    else:
+        width = video_size[0]
+        height = video_size[1] // 2
+    
+    # Output file path
+    output_file = os.path.join(output_dir, f"final_combined_{os.path.splitext(os.path.basename(filename))[0]}.mp4")
+    
+    # First, get information about the input videos
+    video_info = []
+    for i, video_path in enumerate(video_paths):
+        probe_cmd = [
+            'ffprobe', 
+            '-v', 'error',
+            '-select_streams', 'v:0',
+            '-show_entries', 'stream=width,height,r_frame_rate',
+            '-of', 'json',
+            video_path
+        ]
+        try:
+            probe_result = subprocess.run(probe_cmd, capture_output=True, text=True, check=True)
+            video_info.append(probe_result.stdout)
+            print(f"\nVideo {i+1} info:")
+            print(probe_result.stdout)
+        except subprocess.CalledProcessError as e:
+            print(f"Error getting info for video {i+1}:")
+            print(e.stderr)
+            raise
+    
+    # Filter complex that scales videos to fit width while maintaining aspect ratio
+    filter_complex = (
+        f'[0:v]scale={width}:{height}:force_original_aspect_ratio=1,pad={width}:{height}:(ow-iw)/2:(oh-ih)/2[v0];'
+        f'[1:v]scale={width}:{height}:force_original_aspect_ratio=1,pad={width}:{height}:(ow-iw)/2:(oh-ih)/2[v1];'
+        f'[v0][v1]vstack[v]'
+    )
+    
+    # Use ffmpeg to create the final video
+    ffmpeg_cmd = [
+        'ffmpeg', '-y',
+        '-i', video_paths[0],  # First video (top)
+        '-i', video_paths[1],  # Second video (bottom)
+        '-filter_complex', filter_complex,
+        '-map', '[v]',  # Map the stacked video
+        '-map', '0:a',  # Map audio from first input
+        '-c:v', 'libx264',
+        '-c:a', 'aac',
+        '-preset', 'ultrafast',  # Use fastest preset
+        '-crf', '23',  # Slightly lower quality for speed
+        '-pix_fmt', 'yuv420p',
+        '-r', str(fps),
+        output_file
+    ]
+    
+    print("\nPreparing to combine videos:")
+    print(f"Output file: {output_file}")
+    print(f"Frame rate: {fps} fps")
+    print(f"Number of input files: 2")
+    print(f"Video dimensions: {width}x{height} for each video")
+    print(f"Input video 1: {video_paths[0]}")
+    print(f"Input video 2: {video_paths[1]}")
+    
+    print("\nFFmpeg command:")
+    print(' '.join(ffmpeg_cmd))
+    
+    try:
+        print("\nExecuting FFmpeg command...")
+        result = subprocess.run(ffmpeg_cmd, capture_output=True, text=True, check=True)
+        print("FFmpeg command completed successfully")
+        if result.stdout:
+            print("FFmpeg output:")
+            print(result.stdout)
+    except subprocess.CalledProcessError as e:
+        print(f"\nError executing FFmpeg command:")
+        print(f"Error code: {e.returncode}")
+        print(f"Error output:")
+        print(e.stderr)
+        raise
+    except Exception as e:
+        print(f"\nUnexpected error during video combination:")
+        print(str(e))
+        raise
+    
+    print(f"\nCombined video saved to {output_file}")
+    return output_file

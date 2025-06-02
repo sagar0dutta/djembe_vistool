@@ -1,40 +1,91 @@
 import os
 import subprocess
 
-def get_layout_config(layout_name='L2'):
-    """Get layout configuration by name"""
-    layouts = {
-        'L1': [
-            {'view': 'front', 'x': 0, 'y': 0, 'width': 640, 'height': 360},
-            {'view': 'BKO_E1_D5_01_Maraka_pre_R_Mix.mp4', 'x': 640, 'y': 0, 'width': 640, 'height': 360},
-            {'view': 'joint_position', 'x': 0, 'y': 360, 'width': 1280, 'height': 180}
-        ],
-        'L2': [
-            {'view': 'front', 'x': 0, 'y': 0, 'width': 640, 'height': 360},
-            {'view': 'right', 'x': 640, 'y': 0, 'width': 640, 'height': 360},
-            {'view': 'joint_position', 'x': 0, 'y': 360, 'width': 1280, 'height': 360}
-        ]
-    }
-    return layouts.get(layout_name, layouts['L2'])  # Default to L2 if layout not found
+# def get_layout_config(layout_name='L2'):
+#     """Get layout configuration by name"""
+#     layouts = {
+#         'L1': [
+#             {'view': 'front', 'x': 0, 'y': 0, 'width': 640, 'height': 360},
+#             {'view': 'BKO_E1_D5_01_Maraka_pre_R_Mix.mp4', 'x': 640, 'y': 0, 'width': 640, 'height': 360},
+#             {'view': 'joint_position', 'x': 0, 'y': 360, 'width': 1280, 'height': 180}
+#         ],
+#         'L2': [
+#             {'view': 'front', 'x': 0, 'y': 0, 'width': 640, 'height': 360},
+#             {'view': 'right', 'x': 640, 'y': 0, 'width': 640, 'height': 360},
+#             {'view': 'joint_position', 'x': 0, 'y': 360, 'width': 1280, 'height': 360}
+#         ]
+#     }
+#     return layouts.get(layout_name, layouts['L2'])  # Default to L2 if layout not found
 
-def get_video_paths(output_dir, filename, joint_name="LeftAnkle", axis='y'):
-    """Get dictionary mapping view names to their expected video paths"""
-    return {
-        'front': os.path.join(output_dir, "front_view.mp4"),
-        'right': os.path.join(output_dir, "right_view.mp4"),
-        # 'left': os.path.join(output_dir, "left_view.mp4"),
-        # 'top': os.path.join(output_dir, "top_view.mp4"),
-        
-        'dundun': os.path.join(output_dir, "Dun.mp4"),
-        'J1': os.path.join(output_dir, "J1.mp4"),
-        'J2': os.path.join(output_dir, "J2.mp4"),
-        'combined': os.path.join(output_dir, "combined.mp4"),
-        
-        'joint_pos': os.path.join(output_dir, f"{joint_name}_{axis}_position.mp4"),
-        'video_mix': os.path.join(output_dir, f"{filename}_pre_R_Mix_trimmed.mp4"),
-        'audio': os.path.join(output_dir, f"{filename}_pre_R_Mix_trimmed_audio.mp3")
-        
-    }
+def get_video_paths(output_dir, filename, joint_name="LeftAnkle", axis="y"):
+    """
+    Scan `output_dir` for expected video/audio files and return a dict mapping
+    descriptive keys to full file paths. Only files that actually exist are included.
+    
+    Parameters:
+    - output_dir (str): directory containing the video/audio files
+    - filename (str): base name used for the mixed video/audio, e.g. "BKO_E1_D1_02_Maraka"
+    - joint_name (str): joint name for the joint_position file, e.g. "LeftAnkle"
+    - axis (str): axis for the joint_position file, e.g. "y"
+    
+    Returns:
+    - dict[str, str]: mapping of keys to their corresponding file paths
+      Possible keys (if the matching file is found):
+        • "front", "right", "left", "top"       ← any file ending in "_view.mp4"
+        • "dundun"                               ← "Dun.mp4"
+        • "J1", "J2"                             ← "J1.mp4", "J2.mp4"
+        • "combined_drum"                             ← "drum_combined.mp4"
+        • "joint_pos"                            ← f"{joint_name}_{axis}_position.mp4"
+        • "video_mix"                            ← f"{filename}_pre_R_Mix_trimmed.mp4"
+        • "audio"                                ← f"{filename}_pre_R_Mix_trimmed_audio.mp3"
+    """
+
+    video_paths = {}
+    files = os.listdir(output_dir)
+
+    # 1) _view files: map "<prefix>_view.mp4" → key = "<prefix>"
+    for fname in files:
+        if not fname.lower().endswith(".mp4"):
+            continue
+
+        base, ext = os.path.splitext(fname)
+        if base.endswith("_view"):
+            # e.g. "front_view.mp4" → key "front"
+            view_key = base[: -len("_view")]
+            video_paths[view_key] = os.path.join(output_dir, fname)
+
+    # 2) "Dun.mp4" → key "dundun"
+    dun_name = "Dun.mp4"
+    if dun_name in files:
+        video_paths["dundun"] = os.path.join(output_dir, dun_name)
+
+    # 3) "J1.mp4" and "J2.mp4" → keys "J1", "J2"
+    for joint_vid in ("J1.mp4", "J2.mp4"):
+        if joint_vid in files:
+            key = os.path.splitext(joint_vid)[0]  # yields "J1" or "J2"
+            video_paths[key] = os.path.join(output_dir, joint_vid)
+
+    # 4) "drum_combined.mp4" → key "combined"
+    combined_name = "drum_combined.mp4"
+    if combined_name in files:
+        video_paths["combined_drum"] = os.path.join(output_dir, combined_name)
+
+    # 5) joint position: f"{joint_name}_{axis}_position.mp4" → key "joint_pos"
+    joint_vid_name = f"{joint_name}_{axis}_position.mp4"
+    if joint_vid_name in files:
+        video_paths["joint_pos"] = os.path.join(output_dir, joint_vid_name)
+
+    # 6) mixed video: f"{filename}_pre_R_Mix_trimmed.mp4" → key "video_mix"
+    mix_vid = f"{filename}_pre_R_Mix_trimmed.mp4"
+    if mix_vid in files:
+        video_paths["video_mix"] = os.path.join(output_dir, mix_vid)
+
+    # 7) audio: f"{filename}_pre_R_Mix_trimmed_audio.mp3" → key "audio"
+    audio_name = f"{filename}_pre_R_Mix_trimmed_audio.mp3"
+    if audio_name in files:
+        video_paths["audio"] = os.path.join(output_dir, audio_name)
+
+    return video_paths
 
 def combine_views(
     filename,
@@ -99,17 +150,6 @@ def combine_views(
             f'scale={width}:{height}'  # Then scale to desired size
             f'[v{input_count}];'
         )
-        
-        # Add view name only if it's not the joint position visualization
-        # if view_name != 'joint_position':
-        #     filter_complex.append(
-        #         f'[v{input_count}]drawtext=text=\'{view_name.title()} View\':'
-        #         f'fontcolor=white:fontsize=24:'
-        #         f'x=(w-text_w)/2:y=20[v{input_count}t];'
-        #     )
-        # else:
-        #     # For joint position, just pass through without adding text
-        #     filter_complex.append(f'[v{input_count}]copy[v{input_count}t];')
         
         # Overlay this video on top of the previous result
         if input_count == 0:
@@ -179,61 +219,3 @@ def combine_views(
     
     
     return output_file
-
-# def main():
-#     # Configuration
-#     filename = "BKO_E1_D5_01_Maraka"
-#     bvh_file = filename + "_T"
-#     start_time = 120.0
-#     end_time = 150.0
-#     video_size = (1280, 720)
-#     fps = 24
-#     joint_name = "LeftAnkle"
-#     axis = 'y'
-    
-#     # Get output directory
-#     output_dir = os.path.join("output", f"{bvh_file}_{start_time:.1f}_{end_time:.1f}")
-    
-#     # Choose layout
-#     layout = {
-#         'L1': [
-#             {'view': 'front', 'x': 0, 'y': 0, 'width': 320, 'height': 360},
-#             {'view': 'right', 'x': 320, 'y': 0, 'width': 320, 'height': 360},
-#             {'view': 'video_mix', 'x': 640, 'y': 0, 'width': 640, 'height': 360},
-#             {'view': 'combined', 'x': 0, 'y': 360, 'width': 1280, 'height': 360}
-#         ],
-#         'L2': [
-#             {'view': 'front', 'x': 0, 'y': 0, 'width': 640, 'height': 360},
-#             {'view': 'right', 'x': 640, 'y': 0, 'width': 640, 'height': 360},
-#             {'view': 'joint_position', 'x': 0, 'y': 360, 'width': 1280, 'height': 360}
-#         ]
-#     }
-#     # layout_name = 'L1'  # Change this to use a different layout
-#     layout_config = layout['L1']
-    
-#     # Get video paths
-#     view_videos = get_video_paths(output_dir, filename, joint_name, axis)
-    
-#     # Check if we have all required videos for the layout
-#     required_views = {item['view'] for item in layout_config}
-#     missing_views = required_views - set(view_videos.keys())
-    
-#     if missing_views:
-#         print(f"Warning: Missing videos for views: {missing_views}")
-#         print("Please run combine_views.py first to generate the videos")
-#         return
-    
-#     # Combine the videos
-#     combine_views(
-#         filename=bvh_file,
-#         start_time=start_time,
-#         end_time=end_time,
-#         output_dir=output_dir,
-#         view_videos=view_videos,
-#         layout_config=layout_config,
-#         video_size=video_size,
-#         fps=fps
-#     )
-
-# if __name__ == "__main__":
-#     main() 
