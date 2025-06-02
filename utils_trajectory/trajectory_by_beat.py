@@ -15,7 +15,7 @@ def plot_foot_trajectories_by_beat(
     frame_rate: float = 240,
     time_segments: list = None,  # List of (start, end) tuples
     n_beats_per_cycle: int = 4,
-    n_subdiv_per_beat: int = 12,
+    n_subdiv_per_beat: int = 3,
     nn: int = 2,
     figsize: tuple = (12, 6),
     dpi: int = 200,
@@ -127,7 +127,8 @@ def plot_foot_trajectories_by_beat(
             cyc_df = pd.read_csv(cycles_csv)
             cyc_df = cyc_df[(cyc_df["Virtual Onset"] >= seg_start) & (cyc_df["Virtual Onset"] <= seg_end)]
             onsets = cyc_df["Virtual Onset"].values[:-1]
-
+            total_cycles = len(onsets) - 1
+            
             # foot onsets
             left_df  = pd.read_csv(left_onsets_csv)
             right_df = pd.read_csv(right_onsets_csv)
@@ -151,16 +152,24 @@ def plot_foot_trajectories_by_beat(
             
             for c in onsets:
                 beat_time = c + beat_offset
+                
                 # Left foot
                 hits = left_times[(left_times>=beat_time-half_win)&(left_times<=beat_time+half_win)]
                 if len(hits):
                     cyc_L.append(c)
                     L_near[c] = hits
+                
+                
                 # Right foot
                 hits = right_times[(right_times>=beat_time-half_win)&(right_times<=beat_time+half_win)]
                 if len(hits):
                     cyc_R.append(c)
                     R_near[c] = hits
+                    
+            # counter for total onsets in window:
+            left_onsets_in_window = sum(len(hits) for hits in L_near.values())
+            right_onsets_in_window = sum(len(hits) for hits in R_near.values())
+            # total_onsets_in_window = left_onsets_in_window + right_onsets_in_window
 
             # Plot left foot trajectories with onsets
             for i, c in enumerate(cyc_L):
@@ -305,11 +314,16 @@ def plot_foot_trajectories_by_beat(
         xlabel = "Beats relative to beat" if use_cycles else "Time relative to beat (s)"
         ax.set_xlabel(xlabel)
         ax.set_ylabel("Foot Y Position")
-        ax.set_title(f"Beat {beat_idx + 1}")
-        ax.grid(True, alpha=0.3)
-        ax.set_xlim(-1, 1)    
-        # xticks = np.arange(0, 4.01, 0.33)
-        # ax.set_xticks(xticks)
+        ax.set_title(f"Beat {beat_idx + 1} \n R:{right_onsets_in_window} ({right_onsets_in_window*100/total_cycles:.0f}%) |  L:{left_onsets_in_window} ({left_onsets_in_window*100/total_cycles:.0f}%) |  C:{total_cycles}")
+        ax.grid(True, alpha=0.3)  
+        
+        if use_cycles:
+            xlim = nn * subdiv_len / beat_len +0.01  # Convert time to beats
+        else:
+            xlim = nn * subdiv_len  # Keep in seconds
+
+        ax.set_xlim(-xlim, xlim)
+
 
     # Add colorbar to the figure
     sm = plt.cm.ScalarMappable(cmap=cmap, norm=plt.Normalize(total_start, total_end))

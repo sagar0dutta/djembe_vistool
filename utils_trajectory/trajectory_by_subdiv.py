@@ -18,8 +18,8 @@ def plot_foot_trajectories_by_subdiv(
     frame_rate: float = 240,
     time_segments: list = None,  # List of (start, end) tuples
     n_beats_per_cycle: int = 4,
-    n_subdiv_per_beat: int = 12,
-    nn: int = 8,
+    n_subdiv_per_beat: int = 3,
+    nn: int = 3,
     figsize: tuple = (12, 6),
     dpi: int = 200,
     use_cycles: bool = True,
@@ -114,7 +114,6 @@ def plot_foot_trajectories_by_subdiv(
         subdiv_offset = (current_subdiv - 1) * subdiv_len
         total_offset = subdiv_offset
         
-        
 
         # Process each time segment
         for seg_start, seg_end in time_segments:
@@ -128,6 +127,7 @@ def plot_foot_trajectories_by_subdiv(
             cyc_df = pd.read_csv(cycles_csv)
             cyc_df = cyc_df[(cyc_df["Virtual Onset"] >= seg_start) & (cyc_df["Virtual Onset"] <= seg_end)]
             onsets = cyc_df["Virtual Onset"].values[:-1]
+            total_cycles = len(onsets) - 1
 
             # foot onsets
             left_df  = pd.read_csv(left_onsets_csv)
@@ -163,6 +163,10 @@ def plot_foot_trajectories_by_subdiv(
                 if len(hits):
                     cyc_R.append(c)
                     R_near[c] = hits
+                    
+            # counter for total onsets in window:
+            left_onsets_in_window = sum(len(hits) for hits in L_near.values())
+            right_onsets_in_window = sum(len(hits) for hits in R_near.values())
 
             # Plot left foot trajectories with onsets
             for i, c in enumerate(cyc_L):
@@ -224,8 +228,16 @@ def plot_foot_trajectories_by_subdiv(
         xlabel = "Beats relative to subdivision" if use_cycles else "Time relative to subdivision (s)"
         ax.set_xlabel(xlabel)
         ax.set_ylabel("Foot Y Position")
-        ax.set_title(f"Subdivision {current_subdiv}")   # Beat {beat_idx + 1},
+        ax.set_title(f"Subdivision {current_subdiv} \n R:{right_onsets_in_window} ({right_onsets_in_window*100/total_cycles:.0f}%) |  L:{left_onsets_in_window} ({left_onsets_in_window*100/total_cycles:.0f}%) |  C:{total_cycles}")   # Beat {beat_idx + 1},
         ax.grid(True, alpha=0.3)
+        
+        
+        if use_cycles:
+            xlim = nn * subdiv_len / beat_len +0.01  # Convert time to beats
+        else:
+            xlim = nn * subdiv_len  # Keep in seconds
+
+        ax.set_xlim(-xlim, xlim)
 
         # Update legend to show current subdivision color
         # if beat_idx == 0:

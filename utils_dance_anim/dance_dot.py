@@ -196,7 +196,7 @@ def animate_dance_phase_analysis(
             ax.set_title(f'File: {file_name} | Window: {W_start:.1f}s - {W_end:.1f}s | Onset: Dance | Time: {frame:.2f}s')
         return playhead, h_playhead,
 
-    frames = np.arange(W_start, W_end, 0.05)
+    frames = np.arange(W_start, W_end, 1/24)
     anim = animation.FuncAnimation(
         fig, update, frames=frames,
         interval=50, blit=True

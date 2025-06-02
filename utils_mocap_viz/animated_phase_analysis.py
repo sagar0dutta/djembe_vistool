@@ -85,6 +85,15 @@ def animate_phase_analysis(file_name, W_start, W_end, cycles_csv_path, onsets_cs
         cycles_csv_path, onsets_csv_path, onset_type, W_start, W_end
     )
     
+    # Debug prints for phase analysis data
+    print("\nPhase Analysis Debug Info:")
+    print(f"Input window: {W_start:.2f}s to {W_end:.2f}s")
+    print(f"Number of phase points: {len(phases)}")
+    print(f"Phase range: {phases.min():.3f} to {phases.max():.3f}")
+    print(f"Window positions range: {window_positions.min():.3f} to {window_positions.max():.3f}")
+    print(f"KDE x range: {kde_xx.min():.3f} to {kde_xx.max():.3f}")
+    print(f"Number of KDE points: {len(kde_xx)}")
+    
     # Create figure and axis
     fig, ax = plt.subplots(figsize=figsize, dpi=dpi)
     
@@ -158,7 +167,7 @@ def animate_phase_analysis(file_name, W_start, W_end, cycles_csv_path, onsets_cs
     # Create animation
     print("\nCreating animation...")
     # Only create frames within the analysis window
-    frames = np.arange(W_start, W_end, 0.05)  # 50ms steps
+    frames = np.arange(W_start, W_end, 1/24)  # 50ms steps
     print(f"Animation will have {len(frames)} frames")
     print(f"Time range: {frames[0]:.2f}s - {frames[-1]:.2f}s")
     

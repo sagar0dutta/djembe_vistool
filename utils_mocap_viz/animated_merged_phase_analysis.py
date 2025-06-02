@@ -179,7 +179,7 @@ def animate_merged_phase_analysis(file_name, W_start, W_end, cycles_csv_path, on
     # Create animation
     print("\nCreating animation...")
     # Only create frames within the analysis window
-    frames = np.arange(W_start, W_end, 0.05)  # 50ms steps
+    frames = np.arange(W_start, W_end, 1/24)  # 50ms steps
     print(f"Animation will have {len(frames)} frames")
     print(f"Time range: {frames[0]:.2f}s - {frames[-1]:.2f}s")
     
