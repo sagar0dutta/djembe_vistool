@@ -209,10 +209,12 @@ def plot_merged_stacked(file_name, cycles_csv_path, onsets_csv_path, W_start=Non
     
     # Set axis labels
     ax.set_xlabel('Normalized metric cycle')
-    ax.set_ylabel('Relative Position')
+    ax.set_ylabel('Instrument')
     
     # Set y-axis limits to accommodate all ranges
     ax.set_ylim(-5.5, 20.5)
+    ax.set_yticks([3, 10, 17])
+    ax.set_yticklabels(['Dun', 'J1', 'J2'])
     
     # Add grid
     ax.grid(True, alpha=0.3)
@@ -224,7 +226,7 @@ def plot_merged_stacked(file_name, cycles_csv_path, onsets_csv_path, W_start=Non
         ax.set_title(f'File: {file_name} | Full Recording')
     
     # Add legend inside the plot
-    ax.legend(loc='upper right', framealpha=0.7, fontsize='xx-small')
+    # ax.legend(loc='upper right', framealpha=0.7, fontsize='xx-small')
     
     plt.tight_layout()
     return fig, ax

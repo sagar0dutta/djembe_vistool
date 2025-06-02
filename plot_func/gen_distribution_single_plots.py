@@ -30,7 +30,7 @@ def load_onsets(onsets_csv_path, onset_type):
     return np.sort(np.array(df[onset_type].values))
 
 def find_cycle_phases(onsets, cycles):
-    """Find the cycle and phase for each onset.
+    """Find the cycle and phase for each onset, handling circular nature of metric cycle.
     
     Args:
         onsets: Array of onset times
@@ -65,18 +65,20 @@ def find_cycle_phases(onsets, cycles):
         # Compute initial phase
         f = (onset - L_c) / (L_c1 - L_c)
         
-        # If phase is very close to end of cycle (> 0.95), 
-        # reassign to next cycle if possible
-        if f > 0.95 and c + 2 < len(cycles):
-            c = c + 1
-            # Recompute phase using next cycle boundaries
-            L_c = cycles[c]
-            L_c1 = cycles[c + 1]
-            # Skip if next cycle is invalid
-            if L_c1 <= L_c:
-                continue
-            # Recompute final phase in new cycle
-            f = (onset - L_c) / (L_c1 - L_c)
+        # Handle phases near cycle boundaries
+        if f > 0.95:  # Close to cycle end
+            # For downbeat (first subdivision), include negative phase
+            if c == 0:  # First cycle
+                f = f - 1.0  # Make it negative
+            else:
+                # For other cycles, assign to next cycle
+                c = c + 1
+                if c + 1 < len(cycles):
+                    L_c = cycles[c]
+                    L_c1 = cycles[c + 1]
+                    if L_c1 <= L_c:
+                        continue
+                    f = (onset - L_c) / (L_c1 - L_c)
         
         cycle_indices.append(c)
         phases.append(f)
@@ -109,7 +111,7 @@ def compute_window_positions(onsets, W_start, W_end):
     return positions, mask
 
 def kde_estimate(data, SIG=0.01):
-    """Compute KDE estimate using the provided logic.
+    """Compute KDE estimate handling negative phases.
     
     Args:
         data: Array of phase values
@@ -123,7 +125,8 @@ def kde_estimate(data, SIG=0.01):
     if len(valid_data) == 0:
         return np.array([]), np.array([])
     
-    xx = np.arange(0, 1.001, 0.001)  # Fine grid between 0 and 1(0, 1.001, 0.001)
+    # Extend grid to include negative values
+    xx = np.arange(-0.2, 1.001, 0.001)  # Include negative values
     h = np.zeros_like(xx)
     
     for d in valid_data:
@@ -187,6 +190,9 @@ def plot_results(phases, window_positions, kde_xx, kde_h, file_name, onset_type,
     
     # Set y-axis limits
     ax.set_ylim(-0.55, 1.0)
+    
+    # Set x-axis limits to show negative values
+    ax.set_xlim(-0.2, 1.0)
     
     # Customize y-axis ticks to only show positive values
     yticks = np.arange(0, 1.1, 0.2)

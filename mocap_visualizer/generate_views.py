@@ -75,7 +75,7 @@ def generate_individual_videos(bvh_file, start_time, end_time, output_fps, video
 def trim_video(input_file, output_file, start_time, end_time, target_fps=24):
     """Trim a video using FFmpeg and convert to target frame rate, also extract audio separately"""
     # Trim video
-    command = [
+    video_command = [
         'ffmpeg', '-y',
         '-ss', str(start_time),
         '-to', str(end_time),
@@ -86,7 +86,17 @@ def trim_video(input_file, output_file, start_time, end_time, target_fps=24):
         '-pix_fmt', 'yuv420p',
         output_file
     ]
-    subprocess.run(command, check=True)
+    # subprocess.run(video_command, check= True)
+    print(f"\nExecuting video processing command:")
+    print(" ".join(video_command))
+    try:
+        result = subprocess.run(video_command, check=True, capture_output=True, text=True)
+        print("Video processing completed successfully")
+        print(f"Output: {result.stdout}")
+    except subprocess.CalledProcessError as e:
+        print(f"Error during video processing: {e}")
+        print(f"Error output: {e.stderr}")
+        raise
     
     # Extract audio
     audio_output = os.path.splitext(output_file)[0] + '_audio.mp3'
@@ -99,7 +109,17 @@ def trim_video(input_file, output_file, start_time, end_time, target_fps=24):
         '-map', 'a',
         audio_output
     ]
-    subprocess.run(audio_command, check=True)
+    # subprocess.run(audio_command, check= True)
+    print(f"\nExecuting audio processing command:")
+    print(" ".join(audio_command))
+    try:
+        result = subprocess.run(audio_command, check=True, capture_output=True, text=True)
+        print("Audio processing completed successfully")
+        print(f"Output: {result.stdout}")
+    except subprocess.CalledProcessError as e:
+        print(f"Error during audio processing: {e}")
+        print(f"Error output: {e.stderr}")
+        raise
 
 def prepare_videos(
     filename,

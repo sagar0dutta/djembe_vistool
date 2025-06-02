@@ -65,7 +65,7 @@ class MocapVisualizerBase:
     def load_bvh(self, bvh_file):
         """Load data from BVH file"""
         # Convert BVH to CSV
-        base_name = os.path.splitext(bvh_file)[0]
+        base_name = os.path.splitext(os.path.basename(bvh_file))[0] #os.path.splitext(bvh_file)[0]
         pos_csv = os.path.join(self.dir_csv, f"{base_name}_worldpos.csv")
         rot_csv = os.path.join(self.dir_csv, f"{base_name}_rotations.csv")
         

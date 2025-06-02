@@ -56,7 +56,7 @@ def analyze_phases_no_plot(cycles_csv_path, onsets_csv_path, onset_type, W_start
     
     return phases, window_positions, kde_xx, kde_h
 
-def animate_merged_phase_analysis(file_name, W_start, W_end, cycles_csv_path, onsets_csv_path, figsize=(10, 6), dpi=100, save_path=None, save_dir=None):
+def animate_merged_phase_analysis(file_name, W_start, W_end, cycles_csv_path, onsets_csv_path, figsize=(10, 6), dpi=100, save_fname=None, save_dir=None):
     """Animate the merged phase analysis plot with a moving playhead.
     
     Args:
@@ -67,7 +67,7 @@ def animate_merged_phase_analysis(file_name, W_start, W_end, cycles_csv_path, on
         onsets_csv_path: Path to the onsets CSV file
         figsize: Figure size in inches
         dpi: Dots per inch for the figure
-        save_path: Path to save the animation (MP4 format)
+        save_fname: Path to save the animation (MP4 format)
         save_dir: Directory to save the animation in
     """
     # Get cycles for playhead animation
@@ -127,7 +127,8 @@ def animate_merged_phase_analysis(file_name, W_start, W_end, cycles_csv_path, on
     # Add title
     ax.set_title(f'File: {file_name} | Window: {W_start:.1f}s - {W_end:.1f}s')
     
-    # Set y-axis limits and ticks
+    # Set x,y-axis limits and ticks
+    ax.set_xlim(-0.1, 1.0)
     ax.set_ylim(-0.55, 1.0)
     yticks = np.arange(0, 1.1, 0.2)
     ax.set_yticks(yticks)
@@ -181,52 +182,25 @@ def animate_merged_phase_analysis(file_name, W_start, W_end, cycles_csv_path, on
     # Apply tight_layout before saving
     plt.tight_layout()
     
-    if save_path:
+    if save_fname:
         # If save_dir is provided, use it to construct the full path
         if save_dir:
             os.makedirs(save_dir, exist_ok=True)
-            save_path = os.path.join(save_dir, save_path)
+            save_fname = os.path.join(save_dir, save_fname)
         
-        print(f"\nSaving animation to: {save_path}")
+        print(f"\nSaving animation to: {save_fname}")
         try:
             # Save animation as MP4
             writer = animation.FFMpegWriter(fps=20, bitrate=2000)
-            anim.save(save_path, writer=writer)
+            anim.save(save_fname, writer=writer)
             plt.close(fig)  # Explicitly close the figure
             print("Animation saved successfully!")
         except Exception as e:
             print(f"Error saving animation: {str(e)}")
             plt.close(fig)  # Close figure even if there's an error
     else:
-        print("Error: save_path must be provided")
+        print("Error: save_fname must be provided")
         plt.close(fig)  # Close figure if no save path
     
     return anim
 
-if __name__ == "__main__":
-    # Example usage
-    file_name = "BKO_E1_D1_02_Maraka"
-    cycles_csv_path = f"virtual_cycles/{file_name}_C.csv"
-    onsets_csv_path = f"drum_onsets/{file_name}.csv"
-    W_start = 50
-    W_end = 100
-    
-    # Set figure size and DPI
-    figsize = (10, 4)  
-    dpi = 150
-    
-    # Save path for the animation
-    save_dir = "phase_analysis_animations"  # New save directory
-    save_path = f"{file_name}_{W_start}_{W_end}_merged_phase_analysis.mp4"
-    
-    print(f"Starting merged phase analysis for {file_name}")
-    print(f"Window: {W_start}s - {W_end}s")
-    
-    try:
-        anim = animate_merged_phase_analysis(file_name, W_start, W_end, 
-                                           cycles_csv_path, onsets_csv_path,
-                                           figsize=figsize, dpi=dpi,
-                                           save_path=save_path,
-                                           save_dir=save_dir)
-    except Exception as e:
-        print(f"Error during animation: {str(e)}") 

@@ -101,22 +101,22 @@ def combine_views(
         )
         
         # Add view name only if it's not the joint position visualization
-        if view_name != 'joint_position':
-            filter_complex.append(
-                f'[v{input_count}]drawtext=text=\'{view_name.title()} View\':'
-                f'fontcolor=white:fontsize=24:'
-                f'x=(w-text_w)/2:y=20[v{input_count}t];'
-            )
-        else:
-            # For joint position, just pass through without adding text
-            filter_complex.append(f'[v{input_count}]copy[v{input_count}t];')
+        # if view_name != 'joint_position':
+        #     filter_complex.append(
+        #         f'[v{input_count}]drawtext=text=\'{view_name.title()} View\':'
+        #         f'fontcolor=white:fontsize=24:'
+        #         f'x=(w-text_w)/2:y=20[v{input_count}t];'
+        #     )
+        # else:
+        #     # For joint position, just pass through without adding text
+        #     filter_complex.append(f'[v{input_count}]copy[v{input_count}t];')
         
         # Overlay this video on top of the previous result
-        current_output = f'overlay{input_count}'
-        filter_complex.append(
-            f'[{last_output}][v{input_count}t]overlay=x={x}:y={y}[{current_output}];'
-        )
-        last_output = current_output
+        if input_count == 0:
+            filter_complex.append(f'[base][v{input_count}]overlay=x={x}:y={y}[overlay{input_count}];')
+        else:
+            filter_complex.append(f'[overlay{input_count-1}][v{input_count}]overlay=x={x}:y={y}[overlay{input_count}];')
+        last_output = f'overlay{input_count}'
         input_count += 1
     
     # Output file path
@@ -146,67 +146,94 @@ def combine_views(
         output_file
     ]
     
+    print("\nPreparing to combine videos:")
+    print(f"Output file: {output_file}")
+    print(f"Duration: {end_time - start_time:.2f} seconds")
+    print(f"Frame rate: {fps} fps")
+    print(f"Number of input files: {len(input_files)}")
+    if 'audio' in view_videos and os.path.exists(view_videos['audio']):
+        print("Audio file will be included")
+    
     print("\nFFmpeg command:")
     print(' '.join(ffmpeg_cmd))
     
-    subprocess.run(ffmpeg_cmd)
-    print(f"Combined video saved to {output_file}")
+    try:
+        print("\nExecuting FFmpeg command...")
+        result = subprocess.run(ffmpeg_cmd, capture_output=True, text=True, check=True)
+        print("FFmpeg command completed successfully")
+        if result.stdout:
+            print("FFmpeg output:")
+            print(result.stdout)
+    except subprocess.CalledProcessError as e:
+        print(f"\nError executing FFmpeg command:")
+        print(f"Error code: {e.returncode}")
+        print(f"Error output:")
+        print(e.stderr)
+        raise
+    except Exception as e:
+        print(f"\nUnexpected error during video combination:")
+        print(str(e))
+        raise
+    
+    print(f"\nCombined video saved to {output_file}")
+    
+    
     return output_file
 
-def main():
-    # Configuration
-    filename = "BKO_E1_D5_01_Maraka"
-    bvh_file = filename + "_T"
-    start_time = 120.0
-    end_time = 150.0
-    video_size = (1280, 720)
-    fps = 24
-    joint_name = "LeftAnkle"
-    axis = 'y'
+# def main():
+#     # Configuration
+#     filename = "BKO_E1_D5_01_Maraka"
+#     bvh_file = filename + "_T"
+#     start_time = 120.0
+#     end_time = 150.0
+#     video_size = (1280, 720)
+#     fps = 24
+#     joint_name = "LeftAnkle"
+#     axis = 'y'
     
-    # Get output directory
-    output_dir = os.path.join("output", f"{bvh_file}_{start_time:.1f}_{end_time:.1f}")
+#     # Get output directory
+#     output_dir = os.path.join("output", f"{bvh_file}_{start_time:.1f}_{end_time:.1f}")
     
-    # Choose layout
-    layout = {
-        'L1': [
-            {'view': 'front', 'x': 0, 'y': 0, 'width': 320, 'height': 360},
-            {'view': 'right', 'x': 320, 'y': 0, 'width': 320, 'height': 360},
-            {'view': 'video_mix', 'x': 640, 'y': 0, 'width': 640, 'height': 360},
-            {'view': 'combined', 'x': 0, 'y': 360, 'width': 1280, 'height': 360}
-        ],
-        'L2': [
-            {'view': 'front', 'x': 0, 'y': 0, 'width': 640, 'height': 360},
-            {'view': 'right', 'x': 640, 'y': 0, 'width': 640, 'height': 360},
-            {'view': 'joint_position', 'x': 0, 'y': 360, 'width': 1280, 'height': 360}
-        ]
-    }
-    # layout_name = 'L1'  # Change this to use a different layout
-    layout_config = layout['L1']
+#     # Choose layout
+#     layout = {
+#         'L1': [
+#             {'view': 'front', 'x': 0, 'y': 0, 'width': 320, 'height': 360},
+#             {'view': 'right', 'x': 320, 'y': 0, 'width': 320, 'height': 360},
+#             {'view': 'video_mix', 'x': 640, 'y': 0, 'width': 640, 'height': 360},
+#             {'view': 'combined', 'x': 0, 'y': 360, 'width': 1280, 'height': 360}
+#         ],
+#         'L2': [
+#             {'view': 'front', 'x': 0, 'y': 0, 'width': 640, 'height': 360},
+#             {'view': 'right', 'x': 640, 'y': 0, 'width': 640, 'height': 360},
+#             {'view': 'joint_position', 'x': 0, 'y': 360, 'width': 1280, 'height': 360}
+#         ]
+#     }
+#     # layout_name = 'L1'  # Change this to use a different layout
+#     layout_config = layout['L1']
     
-    # Get video paths
-    view_videos = get_video_paths(output_dir, filename, joint_name, axis)
+#     # Get video paths
+#     view_videos = get_video_paths(output_dir, filename, joint_name, axis)
     
-    # Check if we have all required videos for the layout
-    required_views = {item['view'] for item in layout_config}
-    missing_views = required_views - set(view_videos.keys())
+#     # Check if we have all required videos for the layout
+#     required_views = {item['view'] for item in layout_config}
+#     missing_views = required_views - set(view_videos.keys())
     
-    if missing_views:
-        print(f"Warning: Missing videos for views: {missing_views}")
-        print("Please run combine_views.py first to generate the videos")
-        return
+#     if missing_views:
+#         print(f"Warning: Missing videos for views: {missing_views}")
+#         print("Please run combine_views.py first to generate the videos")
+#         return
     
-    # Combine the videos
-    combine_views(
-        filename=bvh_file,
-        start_time=start_time,
-        end_time=end_time,
-        output_dir=output_dir,
-        view_videos=view_videos,
-        layout_config=layout_config,
-        video_size=video_size,
-        fps=fps
-    )
+#     # Combine the videos
+#     combine_views(
+#         filename=bvh_file,
+#         start_time=start_time,
+#         end_time=end_time,
+#         output_dir=output_dir,
+#         view_videos=view_videos,
+#         layout_config=layout_config,
+#         video_size=video_size,
+#         fps=fps
+#     )
 
-if __name__ == "__main__":
-    main() 
+# if __name__ == "__main__":
+#     main() 
