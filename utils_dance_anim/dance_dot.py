@@ -1,4 +1,3 @@
-
 import os
 import numpy as np
 # matplotlib.use('Agg')  # Use non-interactive backend
@@ -220,3 +219,76 @@ def animate_dance_phase_analysis(
         print("Error: save_dir must be provided")
         plt.close(fig)
     return anim
+
+def save_dance_phase_plot(
+    file_name, W_start, W_end, cycles_csv_path, dance_csv_path,
+    figsize=(10, 3), dpi=100, save_dir=None, save_format='png'
+):
+    """
+    Create and save a static plot of the dance phase analysis.
+    
+    Args:
+        file_name (str): Name of the file being analyzed
+        W_start (float): Start time of the analysis window
+        W_end (float): End time of the analysis window
+        cycles_csv_path (str): Path to the cycles CSV file
+        dance_csv_path (str): Path to the dance onsets CSV file
+        figsize (tuple): Figure size (width, height) in inches
+        dpi (int): Dots per inch for the output image
+        save_dir (str): Directory to save the plot
+        save_format (str): Format to save the plot ('png', 'jpg', 'pdf', etc.)
+    """
+    phases, window_positions, kde_xx, kde_h = analyze_dance_phases_no_plot(
+        cycles_csv_path, dance_csv_path, W_start, W_end
+    )
+    if phases is None:
+        print("Not enough data for plotting.")
+        return
+
+    fig, ax = plt.subplots(figsize=figsize, dpi=dpi)
+    color = 'purple'
+    kde_color = 'orange'
+
+    # Plot scatter points
+    ax.scatter(phases, window_positions, alpha=0.5, color=color, s=5)
+
+    # Scale KDE to be between -0.5 and 0, starting from bottom
+    kde_scaled = -0.5 + (0.5 * kde_h / np.max(kde_h))
+    ax.fill_between(kde_xx, -0.5, kde_scaled, alpha=0.3, color=kde_color)
+
+    ax.set_xlabel('Normalized metric cycle')
+    ax.set_ylabel('Relative Position in Window')
+    ax.set_title(f'File: {file_name} | Window: {W_start:.1f}s - {W_end:.1f}s | Onset: Dance')
+
+    ax.set_xlim(-0.1, 1)
+    xticks = [0, 0.25, 0.5, 0.75, 1]
+    ax.set_xticks(xticks)
+    
+    ax.set_ylim(-0.55, 1.0)
+    yticks = np.arange(0, 1.1, 0.2)
+    ax.set_yticks(yticks)
+    ax.grid(True, alpha=0.3)
+    
+    # Draw vertical lines at each subdivision i/12
+    ymin, ymax = ax.get_ylim()
+    for subdiv in range(1, 13):
+        xpos = (subdiv - 1) / 12
+        ax.vlines(xpos, ymin, ymax, color=get_subdiv_color(subdiv), linewidth=1)
+
+    plt.tight_layout()
+
+    if save_dir:
+        os.makedirs(save_dir, exist_ok=True)
+        save_filename = f"{file_name}_dance_phase_plot.{save_format}"
+        save_path = os.path.join(save_dir, save_filename)
+        print(f"\nSaving plot to: {save_path}")
+        try:
+            plt.savefig(save_path, format=save_format, dpi=dpi, bbox_inches='tight')
+            plt.close(fig)
+            print("Plot saved successfully!")
+        except Exception as e:
+            print(f"Error saving plot: {str(e)}")
+            plt.close(fig)
+    else:
+        print("Error: save_dir must be provided")
+        plt.close(fig)

@@ -194,13 +194,14 @@ def plot_all_cycles_trajectories(
     print("count of excluded trajectories: ", len(excluded_cycles))
     print(included_cycles)
     
+    # Save the dictionaries ----------------------------------------------------------------------
     pickle_dir = "traj_files"
-    # Save the dictionaries
     with open(os.path.join(pickle_dir, f'{file_name}_included_{traj_threshold}.pkl'), 'wb') as f:
         pickle.dump(included_cycles, f)
     
     with open(os.path.join(pickle_dir, f'{file_name}_excluded_{traj_threshold}.pkl'), 'wb') as f:
         pickle.dump(excluded_cycles, f)
+    # --------------------------------------------------------------------------------------------
     
     # Calculate and plot grand average
     if all_L_trajectories and all_R_trajectories:
@@ -252,7 +253,7 @@ def plot_all_cycles_trajectories(
 
     ax.set_xlabel("Cycle Span")
     ax.set_ylabel("Foot Y Position")
-    ax.set_title(f"All Cycles Trajectories with Grand Average\n{file_name} | {mode}")
+    ax.set_title(f"All Cycles Trajectories with Grand Average\n{file_name} | {mode} | Threshold: {traj_threshold}")
 
     # Add all legends together outside the plot
     custom = [
