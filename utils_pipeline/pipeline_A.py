@@ -303,4 +303,4 @@ def get_tsegment_for(mode_name, mode_value, suffix):
     iff it isn’t None.
     """
     seg = get_segments(mode_value, suffix)
-    return mode_name, seg if seg is not None else {}
+    return mode_name, seg if seg is not None else None

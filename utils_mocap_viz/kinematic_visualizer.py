@@ -95,7 +95,8 @@ def visualize_joint_position(
                         interval=1000/output_fps, blit=True)
     
     # 7. Save video
-    output_file = os.path.join(output_dir, f"{joint_name}_{axis}_position.mp4")
+    output_file = os.path.join(output_dir, f"{joint_name}_{axis}_position_{start_time:.1f}_{end_time:.1f}.mp4")
+
     print(f"\nSaving animation to: {output_file}")
     try:
         anim.save(output_file, writer='ffmpeg', fps=output_fps)

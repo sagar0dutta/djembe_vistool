@@ -265,6 +265,7 @@ def extract_cycle_videos_and_plots(
             '-t', str(duration),
             '-c:v', 'libx264',
             '-c:a', 'aac',
+            "-r", "24",
             video_output_path
         ]
         # subprocess.run(ffmpeg_cmd, capture_output=True)
@@ -316,7 +317,11 @@ def extract_cycle_videos_and_plots(
             # Add yellow glow effect for t=0
             if abs(subdiv_time - downbeat) < 0.001:  # If it's the POI
                 ax.axvline(subdiv_time, color='yellow', linestyle='-', linewidth=3, alpha=0.3)
-            ax.axvline(subdiv_time, color=color, linestyle='-', linewidth=2, alpha=0.7)
+            
+            if subdiv_num in [1, 4, 7, 10]:
+                ax.axvline(subdiv_time, color=color, linestyle='-', linewidth=2, alpha=0.7) #beat color
+            else:
+                ax.axvline(subdiv_time, color=color, linestyle='-', linewidth=2, alpha=0.7) #subdivision color
         
         # Plot trajectories
         ax.plot(t_win, L_win, '--', color='blue', alpha=0.5, label='Left Foot')
@@ -377,24 +382,25 @@ def extract_cycle_videos_and_plots(
             ax.set_title(f'Cycle {i+1} | {window_key}: {downbeat:.2f}s | Time: {frame:.2f}s')
             return v_playhead,
         
-        # Create animation frames at 50fps
-        frames = np.linspace(start_time, end_time, video_n_frames)
+        # Create animation frames at 24fps  
+        plot_n_frames = int((end_time - start_time) * 24)
+        frames = np.linspace(start_time, end_time, plot_n_frames)
         anim = animation.FuncAnimation(
             fig, update, frames=frames,
-            interval=1000/50,  # 50fps
+            interval=1000/24,  # 50fps
             blit=True
         )
         
         # Save animation
         plot_output_path = os.path.join(plot_dir, f"{file_name}_window_{i+1:03d}_{start_time:.2f}_{end_time:.2f}.mp4")
-        writer = animation.FFMpegWriter(fps=50, bitrate=2000)  # 50fps to match video
+        writer = animation.FFMpegWriter(fps=24, bitrate=2000)  # 50fps to match video
         anim.save(plot_output_path, writer=writer)
         plt.close(fig)
         
         print(f"  Video saved: {video_output_path}")
         print(f"  Plot saved: {plot_output_path}")
         print(f"  Video duration: {duration:.3f}s")
-        print(f"  Plot duration: {len(frames)/50:.3f}s")
+        print(f"  Plot duration: {len(frames)/24:.3f}s")
         # break
     print("\nProcessing complete!")
     
