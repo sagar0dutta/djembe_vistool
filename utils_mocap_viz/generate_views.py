@@ -125,6 +125,7 @@ def prepare_videos(
     filename,
     start_time,
     end_time,
+    views_to_generate = ['front'],
     video_path=None,
     video_size=(1280, 720),
     fps=24,
@@ -148,9 +149,10 @@ def prepare_videos(
     
     # Generate all required views
     view_videos = {}
+    # views_to_generate = ['front', 'right', 'left', 'top']
     
     # Generate motion capture views
-    for view in ['front', 'right', 'left', 'top']:
+    for view in views_to_generate:
         view_path = os.path.join(output_dir, f"{view}_view_{start_time:.1f}_{end_time:.1f}.mp4")
         if not os.path.exists(view_path):
             generate_individual_videos(

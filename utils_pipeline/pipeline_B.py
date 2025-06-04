@@ -318,14 +318,14 @@ def extract_cycle_videos_and_plots(
             if abs(subdiv_time - downbeat) < 0.001:  # If it's the POI
                 ax.axvline(subdiv_time, color='yellow', linestyle='-', linewidth=3, alpha=0.3)
             
-            if subdiv_num in [1, 4, 7, 10]:
-                ax.axvline(subdiv_time, color=color, linestyle='-', linewidth=2, alpha=0.7) #beat color
+            if subdiv_num in [-11, -8, -5, -2, 1, 4, 7, 10, 13]:
+                ax.axvline(subdiv_time, color=color, linestyle='-', linewidth=1.5, alpha=0.7) #beat color
             else:
-                ax.axvline(subdiv_time, color=color, linestyle='-', linewidth=2, alpha=0.7) #subdivision color
+                ax.axvline(subdiv_time, color=color, linestyle='--', linewidth=1, alpha=0.3) #subdivision color
         
         # Plot trajectories
         ax.plot(t_win, L_win, '--', color='blue', alpha=0.5, label='Left Foot')
-        ax.plot(t_win, R_win, '--', color='green', alpha=0.5, label='Right Foot')
+        ax.plot(t_win, R_win, '--', color='red', alpha=0.5, label='Right Foot')
         
         # Plot foot onset markers
         for onset in left_times:
@@ -334,7 +334,7 @@ def extract_cycle_videos_and_plots(
         
         for onset in right_times:
             idx = np.argmin(np.abs(t_win - onset))
-            ax.plot(onset, R_win[idx], 'x', color='green', ms=6, alpha=0.8)
+            ax.plot(onset, R_win[idx], 'x', color='red', ms=6, alpha=0.8)
         
         ax.axvline(downbeat, color='yellow', linewidth=6, alpha=0.3, zorder=0)  # Glow effect
         
@@ -369,10 +369,10 @@ def extract_cycle_videos_and_plots(
         # Add legend
         custom = [
             Line2D([0],[0], color='blue', linestyle='--', lw=1),
+            Line2D([0],[0], color='red', linestyle='--', lw=1),
+            Line2D([0],[0], color='black', lw=1.5),
             Line2D([0],[0], color='green', linestyle='--', lw=1),
-            Line2D([0],[0], color='black', lw=1),
-            Line2D([0],[0], color='blue', lw=1),
-            Line2D([0],[0], color='red', lw=1),
+            Line2D([0],[0], color='red', linestyle='--', lw=1),
         ]
         labels = ["Left Foot", "Right Foot", "Subdiv-1 (1,4,7,10)", "Subdiv-2 (2,5,8,11)", "Subdiv-3 (3,6,9,12)"]
         ax.legend(custom, labels, loc='upper left', framealpha=0.3, fontsize=6)
