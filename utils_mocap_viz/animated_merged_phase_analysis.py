@@ -56,7 +56,16 @@ def analyze_phases_no_plot(cycles_csv_path, onsets_csv_path, onset_type, W_start
     
     return phases, window_positions, kde_xx, kde_h
 
-def animate_merged_phase_analysis(file_name, W_start, W_end, cycles_csv_path, onsets_csv_path, figsize=(10, 6), dpi=100, save_fname=None, save_dir=None):
+def animate_merged_phase_analysis(file_name, 
+                                  W_start, 
+                                  W_end, 
+                                  cycles_csv_path, 
+                                  onsets_csv_path, 
+                                  figsize=(10, 6), 
+                                  dpi=100, 
+                                  save_fname=None, 
+                                  save_dir=None, 
+                                  legend_flag=True):
     """Animate the merged phase analysis plot with a moving playhead.
     
     Args:
@@ -71,6 +80,7 @@ def animate_merged_phase_analysis(file_name, W_start, W_end, cycles_csv_path, on
         save_dir: Directory to save the animation in
     """
     # Get cycles for playhead animation
+    print(f"Generating animation for drum merged dot plot for {file_name} | Window: {W_start:.1f}s - {W_end:.1f}s")
     cycles = load_cycles(cycles_csv_path)
     
     print(f"Loading data from:\n  {cycles_csv_path}\n  {onsets_csv_path}")
@@ -149,13 +159,14 @@ def animate_merged_phase_analysis(file_name, W_start, W_end, cycles_csv_path, on
     # Add grid
     ax.grid(True, alpha=0.3)
     
-    # Add legend inside the plot
-    ax.legend(loc='center right', framealpha=0.5, fontsize = 'xx-small')
+    if legend_flag:
+        # Add legend inside the plot
+        ax.legend(loc='upper left', framealpha=0.4, fontsize = 'xx-small')
     
     # Create playhead line
-    playhead, = ax.plot([0, 0], [-0.55, 1.0], 'k-', lw=1, alpha=0.7)
+    playhead, = ax.plot([0, 0], [-0.55, 1.0], color='orange', lw=1.5, alpha=0.7, linestyle='-')
     # Create horizontal playhead line
-    h_playhead, = ax.plot([0, 1], [0, 0], 'k-', lw=1, alpha=0.7)
+    h_playhead, = ax.plot([0, 1], [0, 0], color='orange', lw=1.5, alpha=0.7, linestyle='-')
     
     def find_phase(t):
         """Find the phase for a given time t."""
@@ -177,7 +188,7 @@ def animate_merged_phase_analysis(file_name, W_start, W_end, cycles_csv_path, on
             y_pos = (frame - W_start) / (W_end - W_start)
             h_playhead.set_ydata([y_pos, y_pos])
             # Update title with current time
-            ax.set_title(f'File: {file_name} | Window: {W_start:.1f}s - {W_end:.1f}s | Time: {frame:.2f}s')
+            ax.set_title(f'File: {file_name} | Window: {W_start:.1f}s - {W_end:.1f}s | Onset: Merged Drums | Time: {frame:.2f}s')
         return playhead, h_playhead,
     
     # Create animation

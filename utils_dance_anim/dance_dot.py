@@ -130,12 +130,20 @@ def analyze_dance_phases_no_plot(cycles_csv_path, dance_csv_path, W_start, W_end
     return phases, window_positions, kde_xx, kde_h
 
 def animate_dance_phase_analysis(
-    file_name, W_start, W_end, cycles_csv_path, dance_csv_path,
-    figsize=(10, 3), dpi=100, save_dir=None
-):
+    file_name, 
+    W_start, 
+    W_end, 
+    cycles_csv_path, 
+    dance_csv_path,
+    figsize=(10, 3), 
+    dpi=100, 
+    save_dir=None
+    ):
     """
     Animate the phase analysis plot for dance onsets with a moving playhead.
     """
+    print(f"Generating animation for dance dot plot for {file_name} | Window: {W_start:.1f}s - {W_end:.1f}s")
+    
     cycles = load_cycles(cycles_csv_path)
     phases, window_positions, kde_xx, kde_h = analyze_dance_phases_no_plot(
         cycles_csv_path, dance_csv_path, W_start, W_end
@@ -178,8 +186,8 @@ def animate_dance_phase_analysis(
         else:
             ax.vlines(xpos, ymin, ymax, color=get_subdiv_color(subdiv), linestyle='--', linewidth=1, alpha=0.3)
 
-    playhead, = ax.plot([0, 0], [-0.55, 1.0], 'k-', lw=1, alpha=0.7)
-    h_playhead, = ax.plot([0, 1], [0, 0], 'k-', lw=1, alpha=0.7)
+    playhead, = ax.plot([0, 0], [-0.55, 1.0], color='orange', lw=1.5, alpha=0.7, linestyle='-')
+    h_playhead, = ax.plot([0, 1], [0, 0], color='orange', lw=1.5, alpha=0.7, linestyle='-')
 
     def find_phase(t):
         idx = np.searchsorted(cycles, t)
@@ -196,7 +204,7 @@ def animate_dance_phase_analysis(
             playhead.set_xdata([phase, phase])
             y_pos = (frame - W_start) / (W_end - W_start)
             h_playhead.set_ydata([y_pos, y_pos])
-            ax.set_title(f'File: {file_name} | Window: {W_start:.1f}s - {W_end:.1f}s | Onset: Dance | Time: {frame:.2f}s')
+            ax.set_title(f'File: {file_name} | Window: {W_start:.1f}s - {W_end:.1f}s | Onset: Feet | Time: {frame:.2f}s')
         return playhead, h_playhead,
 
     frames = np.arange(W_start, W_end, 1/24)

@@ -120,12 +120,11 @@ def get_subdiv_color(subdiv_num):
         return 'red'
 
 
-def extract_cycle_videos_and_plots(
+def extract_centered_cycle_videos_and_plots(
     file_name: str,
     windows: list,  # List of (win_start, win_end, t_poi) tuples
     window_key: str,
     base_path_logs: str = "data/logs_v2_may",
-    # video_path: str = "data/videos/BKO_E1_D5_01_Maraka_pre_R_Mix.mp4",
     frame_rate: float = 240,  # Trajectory data frame rate
     n_beats_per_cycle: int = 4,
     n_subdiv_per_beat: int = 3,
@@ -324,8 +323,8 @@ def extract_cycle_videos_and_plots(
                 ax.axvline(subdiv_time, color=color, linestyle='--', linewidth=1, alpha=0.3) #subdivision color
         
         # Plot trajectories
-        ax.plot(t_win, L_win, '--', color='blue', alpha=0.5, label='Left Foot')
-        ax.plot(t_win, R_win, '--', color='red', alpha=0.5, label='Right Foot')
+        ax.plot(t_win, L_win, '-', color='blue', alpha=0.5, label='Left Foot')
+        ax.plot(t_win, R_win, '-', color='red', alpha=0.5, label='Right Foot')
         
         # Plot foot onset markers
         for onset in left_times:
@@ -334,7 +333,7 @@ def extract_cycle_videos_and_plots(
         
         for onset in right_times:
             idx = np.argmin(np.abs(t_win - onset))
-            ax.plot(onset, R_win[idx], 'x', color='red', ms=6, alpha=0.8)
+            ax.plot(onset, R_win[idx], 'o', color='red', ms=6, alpha=0.8)
         
         ax.axvline(downbeat, color='yellow', linewidth=6, alpha=0.3, zorder=0)  # Glow effect
         
@@ -352,7 +351,7 @@ def extract_cycle_videos_and_plots(
         # Create vertical playhead
         v_playhead, = ax.plot([start_time, start_time], 
                             [y_min - 0.1*y_range, y_max + 0.1*y_range],
-                            lw=1, alpha=0.9, color='orange')
+                            lw=1.5, alpha=0.9, color='orange')
         
         # Set up the plot with scaled x-axis
         ax.set_xlabel(f'Beats relative to {window_key}')
@@ -368,8 +367,8 @@ def extract_cycle_videos_and_plots(
         
         # Add legend
         custom = [
-            Line2D([0],[0], color='blue', linestyle='--', lw=1),
-            Line2D([0],[0], color='red', linestyle='--', lw=1),
+            Line2D([0],[0], color='blue', linestyle='-', lw=1),
+            Line2D([0],[0], color='red', linestyle='-', lw=1),
             Line2D([0],[0], color='black', lw=1.5),
             Line2D([0],[0], color='green', linestyle='--', lw=1),
             Line2D([0],[0], color='red', linestyle='--', lw=1),
@@ -403,194 +402,284 @@ def extract_cycle_videos_and_plots(
         print(f"  Plot duration: {len(frames)/24:.3f}s")
         # break
     print("\nProcessing complete!")
-    
-    
-    ######################### GENERATE CONCATENATED VIDEO AND PLOT #########################
 
-def create_concat_file(video_dir, output_file, prefix):
-    """Create a text file listing all videos in order for concatenation"""
-    with open(output_file, 'w') as f:
-        # Get all video files and sort them
-        video_files = sorted([f for f in os.listdir(video_dir) if f.endswith('.mp4')])
-        # Write each file path - use relative path from the text file location
-        for video in video_files:
-            # Get relative path from output_file to video_dir
-            rel_path = os.path.relpath(os.path.join(video_dir, video), os.path.dirname(output_file))
-            f.write(f"file '{rel_path}'\n") 
-            
-def concatenate_and_overlay_videos(file_name, save_dir):
-    """Concatenate cycle videos and plot videos, then overlay them"""
-    video_dir = os.path.join(save_dir, "videos")
-    plot_dir = os.path.join(save_dir, "plots")
-    
-    # Create text files for concatenation
-    video_list = os.path.join(save_dir, "video_list.txt")
-    plot_list = os.path.join(save_dir, "plot_list.txt")
-    
-    # Check if directories exist
-    if not os.path.exists(video_dir):
-        print(f"Video directory not found: {video_dir}")
-        return
-    if not os.path.exists(plot_dir):
-        print(f"Plot directory not found: {plot_dir}")
-        return
-        
-    # Check if text files already exist
-    if os.path.exists(video_list) and os.path.exists(plot_list):
-        print("Concatenation files already exist, skipping creation")
-    else:
-        print("Creating concatenation files...")
-        create_concat_file(video_dir, video_list, f"{file_name}_cycle_")
-        create_concat_file(plot_dir, plot_list, f"{file_name}_cycle_")
-    
-    # Concatenate cycle videos
-    concat_video = os.path.join(save_dir, "concatenated_video.mp4")
-    try:
-        result = subprocess.run([
-            'ffmpeg', '-y',
-            '-f', 'concat',
-            '-safe', '0',
-            '-i', video_list,
-            '-c', 'copy',
-            concat_video
-        ], capture_output=True, text=True)
-        if result.returncode != 0:
-            print("Error concatenating videos:", result.stderr)
-            return
-    except Exception as e:
-        print("Error running ffmpeg:", str(e))
-        return
-    
-    # Concatenate plot videos
-    concat_plot = os.path.join(save_dir, "concatenated_plot.mp4")
-    try:
-        result = subprocess.run([
-            'ffmpeg', '-y',
-            '-f', 'concat',
-            '-safe', '0',
-            '-i', plot_list,
-            '-c', 'copy',
-            concat_plot
-        ], capture_output=True, text=True)
-        if result.returncode != 0:
-            print("Error concatenating plots:", result.stderr)
-            return
-    except Exception as e:
-        print("Error running ffmpeg:", str(e))
-        return
-    
 
-    
-    print(f"Concatenated plot saved: {concat_plot}")
-    print(f"Concatenated video saved: {concat_video}\n")
-    
-def combine_trajectory_views(
-    filename,
-    output_dir,
-    view_videos,
-    layout_config=None,
-    video_size=(1280, 720),
-    fps=24
+def extract_forward_cycle_videos_and_plots(
+    file_name: str,
+    windows: list,  # List of (win_start, win_end, t_poi) tuples
+    # window_key: str,
+    base_path_logs: str = "data/logs_v2_may",
+    frame_rate: float = 240,  # Trajectory data frame rate
+    n_beats_per_cycle: int = 4,
+    n_subdiv_per_beat: int = 3,
+    nn: int = 3,
+    save_dir: str = "cycle_videos",
+    figsize: tuple = (10, 3),
+    dpi: int = 200,
+    legend_flag: bool = True,
 ):
-    """Combine two videos vertically with the first video on top and second on bottom
-    
-    Args:
-        filename: Base filename for output
-        output_dir: Directory to save the output video
-        view_videos: Dictionary with two video paths
-        layout_config: List of dictionaries defining the layout structure
-        video_size: Overall output video size (width, height)
-        fps: Target frame rate for output video
     """
-    # Get the two video paths
-    video_paths = list(view_videos.values())
-    if len(video_paths) != 2:
-        raise ValueError("Expected exactly two videos to combine")
+    Extract video segments and create corresponding trajectory animations
+    for windows around points of interest (beats or subdivisions).
+    Each video/plot shows [0-cycle, +cycle] around the POI.
+    """
+    # Print windows data for debugging
+    video_path = f"data/videos/{file_name}_pre_R_Mix.mp4"
     
-    # Get dimensions from layout
-    if layout_config and len(layout_config) == 2:
-        width = layout_config[0]['width']
-        height = layout_config[0]['height']
-    else:
-        width = video_size[0]
-        height = video_size[1] // 2
+    print("Windows data:")
+    for i, (win_start, win_end, t_poi) in enumerate(windows):
+        print(f"Window {i+1}:")
+        print(f"  Start: {win_start:.3f}")
+        print(f"  End: {win_end:.3f}")
+        print(f"  Duration: {win_end - win_start:.3f}")
+
+    # Create save directories
+    # rec_dir = os.path.join(save_dir, file_name, f"_{start_time:.2f}_{end_time:.2f}")
+    # window_key_dir = os.path.join(rec_dir, window_key)
     
-    # Output file path
-    output_file = os.path.join(output_dir, f"final_combined_{os.path.splitext(os.path.basename(filename))[0]}.mp4")
+    video_dir = os.path.join(save_dir, "videos")     # window_key_dir
+    plot_dir = os.path.join(save_dir, "plots")     # window_key_dir
     
-    # First, get information about the input videos
-    video_info = []
-    for i, video_path in enumerate(video_paths):
-        probe_cmd = [
-            'ffprobe', 
-            '-v', 'error',
-            '-select_streams', 'v:0',
-            '-show_entries', 'stream=width,height,r_frame_rate',
-            '-of', 'json',
-            video_path
+    os.makedirs(save_dir, exist_ok=True)
+    # os.makedirs(window_key_dir, exist_ok=True)     # window_key_dir
+    os.makedirs(video_dir, exist_ok=True)
+    os.makedirs(plot_dir, exist_ok=True)
+    
+    # Build file paths for foot data
+    logs_onset_dir = os.path.join(base_path_logs, f"{file_name}_T", "onset_info")
+    left_onsets_csv = os.path.join(logs_onset_dir, f"{file_name}_T_left_foot_onsets.csv")
+    right_onsets_csv = os.path.join(logs_onset_dir, f"{file_name}_T_right_foot_onsets.csv")
+    left_zpos_csv = os.path.join(logs_onset_dir, f"{file_name}_T_left_foot_zpos.csv")
+    right_zpos_csv = os.path.join(logs_onset_dir, f"{file_name}_T_right_foot_zpos.csv")
+    
+    # Load foot data
+    left_df = pd.read_csv(left_onsets_csv)
+    right_df = pd.read_csv(right_onsets_csv)
+    
+    # Debug prints for foot data
+    print("\nFoot data ranges:")
+    print(f"Left foot time range: {left_df['time_sec'].min():.3f} to {left_df['time_sec'].max():.3f}")
+    print(f"Right foot time range: {right_df['time_sec'].min():.3f} to {right_df['time_sec'].max():.3f}")
+    print(f"Number of left foot onsets: {len(left_df)}")
+    print(f"Number of right foot onsets: {len(right_df)}")
+    
+    # Load trajectory data
+    Lz = pd.read_csv(left_zpos_csv)["zpos"].values
+    Rz = pd.read_csv(right_zpos_csv)["zpos"].values
+    n_frames = len(Lz)
+    times = np.arange(n_frames) / frame_rate  # Times at 240fps
+    
+    print(f"\nProcessing {len(windows)} windows")
+    print(f"Total frames in trajectory data: {n_frames}")
+    print(f"Time range in trajectory data: {times[0]:.3f} to {times[-1]:.3f}")
+    
+    # Process each window
+    for i, (win_start, win_end, t_poi) in enumerate(windows):
+        print(f"\nProcessing window {i+1}:")
+        print(f"  Window time range: {win_start:.3f} to {win_end:.3f}")
+        
+        # Calculate segment times
+        start_time = win_start  # This will be our reference point (beat 1)
+        end_time = win_end
+        duration = end_time - start_time
+        
+        # Calculate avg_cycle from the window duration
+        avg_cycle = duration  # Since window is now 0 to +1 cycle
+        
+        # Calculate window parameters
+        beat_len = avg_cycle / n_beats_per_cycle
+        subdiv_len = beat_len / n_subdiv_per_beat
+        
+        # Get foot onsets for this window
+        left_times = left_df[(left_df["time_sec"]>=win_start)&(left_df["time_sec"]<=win_end)]["time_sec"].values
+        right_times = right_df[(right_df["time_sec"]>=win_start)&(right_df["time_sec"]<=win_end)]["time_sec"].values
+        
+        print(f"  Found {len(left_times)} left foot onsets and {len(right_times)} right foot onsets")
+        if len(left_times) > 0:
+            print(f"  Left foot onset times: {left_times}")
+        if len(right_times) > 0:
+            print(f"  Right foot onset times: {right_times}")
+        
+        # Calculate frame numbers for video (50fps)
+        video_start_frame = int(start_time * 50)
+        video_end_frame = int(end_time * 50)
+        video_n_frames = video_end_frame - video_start_frame
+        
+        # Calculate frame numbers for trajectory (240fps)
+        traj_start_frame = int(start_time * frame_rate)
+        traj_end_frame = int(end_time * frame_rate)
+        traj_n_frames = traj_end_frame - traj_start_frame
+        
+        print(f"  Video frames: {video_start_frame} to {video_end_frame} (50fps)")
+        print(f"  Trajectory frames: {traj_start_frame} to {traj_end_frame} (240fps)")
+        
+        # Check if we have valid frame numbers
+        if traj_start_frame >= traj_end_frame:
+            print(f"  Skipping window {i+1}: Invalid frame range (start >= end)")
+            continue
+        if traj_start_frame < 0:
+            print(f"  Skipping window {i+1}: Start frame < 0")
+            continue
+        if traj_end_frame > len(Lz):
+            print(f"  Skipping window {i+1}: End frame > total frames")
+            continue
+        
+        # Trim trajectory data using frame numbers at 240fps
+        L_win = Lz[traj_start_frame:traj_end_frame]
+        R_win = Rz[traj_start_frame:traj_end_frame]
+        t_win = times[traj_start_frame:traj_end_frame]
+        
+        # Check if we have valid trajectory data
+        if len(L_win) == 0 or len(R_win) == 0:
+            print(f"  Skipping window {i+1}: No trajectory data")
+            continue
+        
+        print(f"  Trajectory data points: {len(L_win)}")
+        
+        # Extract video segment with audio using ffmpeg
+        video_output_path = os.path.join(video_dir, f"{file_name}_window_{i+1:03d}_{start_time:.2f}_{end_time:.2f}.mp4")
+        ffmpeg_cmd = [
+            'ffmpeg', '-y',
+            '-i', str(video_path),
+            '-ss', str(start_time),
+            '-t', str(duration),
+            '-c:v', 'libx264',
+            '-c:a', 'aac',
+            "-r", "24",
+            video_output_path
         ]
+        
+        # Print the command and paths for debugging
+        print(f"\nVideo extraction:")
+        print(f"Input video: {video_path}")
+        print(f"Output video: {video_output_path}")
+        print(f"Start time: {start_time}")
+        print(f"Duration: {duration}")
+        print(f"FFmpeg command: {' '.join(ffmpeg_cmd)}")
+
+        # Run ffmpeg and capture output
+        result = subprocess.run(ffmpeg_cmd, capture_output=True, text=True)
+
+        # Check if the command was successful
+        if result.returncode != 0:
+            print(f"Error extracting video:")
+            print(f"Return code: {result.returncode}")
+            print(f"Error output: {result.stderr}")
+        else:
+            print("Video extraction successful")
+            # Verify the file was created
+            if os.path.exists(video_output_path):
+                print(f"Output file exists: {video_output_path}")
+                print(f"File size: {os.path.getsize(video_output_path)} bytes")
+            else:
+                print("Warning: Output file was not created")
+        
+        #######################################################################
+        
+        # Create figure and axis
+        fig, ax = plt.subplots(figsize=figsize, dpi=dpi)
+        fig.tight_layout(pad=2.0) 
+        
+        # Calculate all subdivision times for the window
+        all_subdiv_times = []
+        for beat_idx in range(0, n_beats_per_cycle + 1):
+            beat_time = start_time + beat_idx * beat_len
+            for subdiv_idx in range(n_subdiv_per_beat):
+                subdiv_time = beat_time + subdiv_idx * subdiv_len
+                if start_time <= subdiv_time <= end_time:
+                    all_subdiv_times.append((subdiv_time, beat_idx * n_subdiv_per_beat + subdiv_idx + 1))
+
+        # Plot subdivision lines with appropriate colors
+        for subdiv_time, subdiv_num in all_subdiv_times:
+            color = get_subdiv_color(subdiv_num)
+            if subdiv_num in [1, 4, 7, 10, 13]:
+                ax.axvline(subdiv_time, color=color, linestyle='-', linewidth=1.5, alpha=0.7) #beat color
+            else:
+                ax.axvline(subdiv_time, color=color, linestyle='--', linewidth=1, alpha=0.3) #subdivision color
+        
+        # Plot trajectories
+        ax.plot(t_win, L_win, '-', color='blue', alpha=0.5, label='Left Foot', linewidth=1.5)
+        ax.plot(t_win, R_win, '-', color='red', alpha=0.5, label='Right Foot', linewidth=1.5)
+        
+        # Plot foot onset markers
+        for onset in left_times:
+            idx = np.argmin(np.abs(t_win - onset))
+            ax.plot(onset, L_win[idx], 'o', color='blue', ms=6, alpha=0.8)
+        
+        for onset in right_times:
+            idx = np.argmin(np.abs(t_win - onset))
+            ax.plot(onset, R_win[idx], 'o', color='red', ms=6, alpha=0.8)
+        
+        # Set y-axis limits with safety checks
         try:
-            probe_result = subprocess.run(probe_cmd, capture_output=True, text=True, check=True)
-            video_info.append(probe_result.stdout)
-            print(f"\nVideo {i+1} info:")
-            print(probe_result.stdout)
-        except subprocess.CalledProcessError as e:
-            print(f"Error getting info for video {i+1}:")
-            print(e.stderr)
-            raise
-    
-    # Filter complex that scales videos to fit width while maintaining aspect ratio
-    filter_complex = (
-        f'[0:v]scale={width}:{height}:force_original_aspect_ratio=1,pad={width}:{height}:(ow-iw)/2:(oh-ih)/2[v0];'
-        f'[1:v]scale={width}:{height}:force_original_aspect_ratio=1,pad={width}:{height}:(ow-iw)/2:(oh-ih)/2[v1];'
-        f'[v0][v1]vstack[v]'
-    )
-    
-    # Use ffmpeg to create the final video
-    ffmpeg_cmd = [
-        'ffmpeg', '-y',
-        '-i', video_paths[0],  # First video (top)
-        '-i', video_paths[1],  # Second video (bottom)
-        '-filter_complex', filter_complex,
-        '-map', '[v]',  # Map the stacked video
-        '-map', '0:a',  # Map audio from first input
-        '-c:v', 'libx264',
-        '-c:a', 'aac',
-        '-preset', 'ultrafast',  # Use fastest preset
-        '-crf', '23',  # Slightly lower quality for speed
-        '-pix_fmt', 'yuv420p',
-        '-r', str(fps),
-        output_file
-    ]
-    
-    print("\nPreparing to combine videos:")
-    print(f"Output file: {output_file}")
-    print(f"Frame rate: {fps} fps")
-    print(f"Number of input files: 2")
-    print(f"Video dimensions: {width}x{height} for each video")
-    print(f"Input video 1: {video_paths[0]}")
-    print(f"Input video 2: {video_paths[1]}")
-    
-    print("\nFFmpeg command:")
-    print(' '.join(ffmpeg_cmd))
-    
-    try:
-        print("\nExecuting FFmpeg command...")
-        result = subprocess.run(ffmpeg_cmd, capture_output=True, text=True, check=True)
-        print("FFmpeg command completed successfully")
-        if result.stdout:
-            print("FFmpeg output:")
-            print(result.stdout)
-    except subprocess.CalledProcessError as e:
-        print(f"\nError executing FFmpeg command:")
-        print(f"Error code: {e.returncode}")
-        print(f"Error output:")
-        print(e.stderr)
-        raise
-    except Exception as e:
-        print(f"\nUnexpected error during video combination:")
-        print(str(e))
-        raise
-    
-    print(f"\nCombined video saved to {output_file}")
-    return output_file
+            y_min = min(L_win.min(), R_win.min())
+            y_max = max(L_win.max(), R_win.max())
+            y_range = y_max - y_min
+            ax.set_ylim(y_min - 0.1*y_range, y_max + 0.1*y_range)
+        except ValueError as e:
+            print(f"  Warning: Could not set y-axis limits: {e}")
+            # Set default y-axis limits
+            ax.set_ylim(-1, 1)
+        
+        # Create vertical playhead
+        v_playhead, = ax.plot([start_time, start_time], 
+                            [y_min - 0.1*y_range, y_max + 0.1*y_range],
+                            lw=1.5, alpha=0.9, color='orange')
+        
+        # Set up the plot with scaled x-axis
+        ax.set_xlabel(f'Beats span')
+        ax.set_ylabel('Foot Position')
+        ax.set_title(f'{file_name} | Window:{start_time:.2f}s - {end_time:.2f}s: {start_time:.2f}s')
+        ax.grid(True, alpha=0.3)
+        
+        # Scale x-axis to show beats instead of cycles
+        x_ticks = np.arange(1, n_beats_per_cycle + 2)
+        x_tick_positions = start_time + (x_ticks-1) * beat_len
+        ax.set_xticks(x_tick_positions)
+        ax.set_xticklabels(x_ticks)
+        ax.set_xlim(start_time, end_time)
+        
+        # Add legend
+        custom = [
+            Line2D([0],[0], color='blue', linestyle='-', lw=1),
+            Line2D([0],[0], color='red', linestyle='-', lw=1),
+            Line2D([0],[0], color='black', lw=1.5),
+            Line2D([0],[0], color='green', linestyle='--', lw=1),
+            Line2D([0],[0], color='red', linestyle='--', lw=1),
+        ]
+        labels = ["Left Foot", "Right Foot", "Subdiv-1 (1,4,7,10)", "Subdiv-2 (2,5,8,11)", "Subdiv-3 (3,6,9,12)"]
+        
+        if legend_flag:
+            ax.legend(custom, labels, loc='upper left', framealpha=0.3, fontsize=6)
+        
+        def update(frame):
+            v_playhead.set_xdata([frame, frame])
+            ax.set_title(f'{file_name} | Window:{start_time:.2f}s - {end_time:.2f}s | Time: {frame:.2f}s')
+            return v_playhead,
+        
+        # Create animation frames at 24fps  
+        plot_n_frames = int((end_time - start_time) * 24)
+        frames = np.linspace(start_time, end_time, plot_n_frames)
+        anim = animation.FuncAnimation(
+            fig, update, frames=frames,
+            interval=1000/24,  # 24fps
+            blit=True
+        )
+        
+        # Save animation
+        plot_output_path = os.path.join(plot_dir, f"{file_name}_window_{i+1:03d}_{start_time:.2f}_{end_time:.2f}.mp4")
+        writer = animation.FFMpegWriter(fps=24, bitrate=2000)
+        anim.save(plot_output_path, writer=writer)
+        plt.close(fig)
+        
+        print(f"  Video saved: {video_output_path}")
+        print(f"  Plot saved: {plot_output_path}")
+        print(f"  Video duration: {duration:.3f}s")
+        print(f"  Plot duration: {len(frames)/24:.3f}s")
+        
+    print("\nProcessing complete!")
+
+
+
+
+

@@ -147,9 +147,10 @@ def prepare_videos(
     # Create output directory
     # output_dir = get_output_dir(filename, start_time, end_time)
     
+    
     # Generate all required views
     view_videos = {}
-    # views_to_generate = ['front', 'right', 'left', 'top']
+    print(f"Generating Skeletonviews for {filename} | Window: {start_time:.1f}s - {end_time:.1f}s")
     
     # Generate motion capture views
     for view in views_to_generate:
