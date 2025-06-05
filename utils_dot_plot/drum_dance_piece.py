@@ -188,7 +188,7 @@ def plot_combined_drum_dance(piece_type,
     ax2.set_xticks(xtick)
     ax2.set_xticklabels(xtick_labels)
     ax2.set_xlim(-33, 400)
-    ax2.set_xlabel('Beat span')
+    # ax2.set_xlabel('Beat span')
     
     ax2.set_ylim(-5.5, 13.5)
     ax2.set_yticks([3, 10])
