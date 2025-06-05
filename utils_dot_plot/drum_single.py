@@ -176,7 +176,7 @@ def plot_results(phases, window_positions, kde_xx, kde_h, file_name, onset_type,
     ax.fill_between(kde_xx, -0.5, kde_scaled, alpha=0.3, color='orange')
     
     # Set axis labels
-    ax.set_xlabel('Normalized metric cycle')
+    ax.set_xlabel('Beat span')
     ax.set_ylabel('Relative Position in Window')
     
     # Add title
@@ -195,12 +195,19 @@ def plot_results(phases, window_positions, kde_xx, kde_h, file_name, onset_type,
     ax.set_xlim(-0.1, 1.0)
     xticks = [0, 0.25, 0.5, 0.75, 1]
     ax.set_xticks(xticks)
+    ax.set_xticklabels([1, 2, 3, 4, 5])
+    
     
     # Draw vertical lines at each subdivision i/12
     ymin, ymax = ax.get_ylim()
     for subdiv  in range(1, 13):
-        xpos = (subdiv - 1) / 12    # subdiv 1 → 0.0, subdiv 4 → 0.25, etc.
-        ax.vlines(xpos, ymin, ymax, color=get_subdiv_color(subdiv), linewidth=1)
+        color = get_subdiv_color(subdiv)
+        x_pos = (subdiv - 1) / 12    # subdiv 1 → 0.0, subdiv 4 → 0.25, etc.
+        
+        if subdiv in [1, 4, 7, 10]:
+            ax.vlines(x_pos, -5.5, 20.5, color=color, linestyle='-', linewidth=1.5, alpha=0.7)
+        else:
+            ax.vlines(x_pos, -5.5, 20.5, color=color, linestyle='--', linewidth=1, alpha=0.3)
     
     # Customize y-axis ticks to only show positive values
     yticks = np.arange(0, 1.1, 0.2)
@@ -214,7 +221,16 @@ def plot_results(phases, window_positions, kde_xx, kde_h, file_name, onset_type,
     else:
         plt.show()
 
-def analyze_phases(cycles_csv_path, onsets_csv_path, onset_type, dance_mode_time_segments=None, dance_mode=None, save_path=None, SIG=0.01, figsize=(12, 8), dpi=100, use_window=True):
+def analyze_phases(cycles_csv_path, 
+                   onsets_csv_path, 
+                   onset_type, 
+                   dance_mode_time_segments=None, 
+                   dance_mode=None, 
+                   save_path=None, 
+                   SIG=0.01, 
+                   figsize=(12, 8), 
+                   dpi=100, 
+                   use_window=True):
     """Main function to perform phase analysis.
     
     Args:

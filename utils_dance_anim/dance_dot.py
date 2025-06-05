@@ -181,6 +181,7 @@ def animate_dance_phase_analysis(
     ymin, ymax = ax.get_ylim()
     for subdiv  in range(1, 13):
         xpos = (subdiv - 1) / 12    # subdiv 1 → 0.0, subdiv 4 → 0.25, etc.
+        
         if subdiv in [1, 4, 7, 10]:
             ax.vlines(xpos, ymin, ymax, color=get_subdiv_color(subdiv), linestyle='-', linewidth=1.5, alpha=0.7)
         else:
