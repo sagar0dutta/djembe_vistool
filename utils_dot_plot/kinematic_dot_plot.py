@@ -22,7 +22,8 @@ def plot_foot_onsets_stacked(file_name,
                              dance_mode_time_segments,
                              figsize=(10, 3),
                              dpi=200,
-                             use_window=True):
+                             use_window=True,
+                             legend_flag=True):
     """Plot left and right foot onsets with stacked scatter and combined KDE, using robust phase and KDE calculation."""
     
     
@@ -67,15 +68,19 @@ def plot_foot_onsets_stacked(file_name,
                     if W_start <= onset <= W_end:
                         segment_duration = W_end - W_start
                         relative_pos = (onset - W_start) / segment_duration
-                        window_pos = seg_idx + relative_pos
+                        # Normalize to 0-1 range by dividing by total number of segments
+                        window_pos = relative_pos / len(dance_mode_time_segments)
                         window_positions.append(window_pos)
                         break
         else:
             window_positions = np.zeros_like(valid_onsets)
 
         window_positions = np.array(window_positions)
+        
+        # Scale to vertical range
         y0, y1 = vertical_ranges[foot_type]
         y_scaled = y0 + (window_positions * (y1 - y0))
+        
 
         # Plot scatter
         ax.scatter(phases * 400, y_scaled, s=5, alpha=0.6, color=color, label=f'{foot_type.capitalize()} Foot')
@@ -136,12 +141,19 @@ def plot_foot_onsets_stacked(file_name,
     title = f'File: {file_name} | Dance Mode: {dance_mode}'
     title += f' | Segments: {len(dance_mode_time_segments)}' if use_window else ' | Full Recording'
     ax.set_title(title, pad=10)
-    ax.legend(loc='upper left', framealpha=0.4, fontsize=6)
+    
+    if legend_flag:
+        ax.legend(loc='upper left', framealpha=0.4, fontsize=6)
 
     return fig, ax, dance_phases_kde
 
 
-def plot_combined_foot_stacked(piece_type, dance_mode, dance_phases_kde_all, figsize=(10, 3), dpi=200):
+def plot_combined_foot_stacked(piece_type, 
+                               dance_mode, 
+                               dance_phases_kde_all, 
+                               figsize=(10, 3), 
+                               dpi=200, 
+                               legend_flag=True):
     """Create a single plot showing combined foot analysis for all pieces of a type"""
     
     fig, ax = plt.subplots(figsize=figsize, dpi=dpi)
@@ -174,6 +186,10 @@ def plot_combined_foot_stacked(piece_type, dance_mode, dance_phases_kde_all, fig
         # Convert lists to numpy arrays
         phases = np.array(all_phases)
         y_scaled = np.array(all_y_scaled)
+        
+        # Normalize y_scaled values to fit within the vertical range
+        y_min, y_max = vertical_ranges[foot_type]
+        y_scaled = y_min + (y_scaled - np.min(y_scaled)) * (y_max - y_min) / (np.max(y_scaled) - np.min(y_scaled))
             
         # Plot scatter with single color for each foot
         ax.scatter(phases * 400,
@@ -224,7 +240,9 @@ def plot_combined_foot_stacked(piece_type, dance_mode, dance_phases_kde_all, fig
     title = f'Piece: {piece_type} | Dance Mode: {dance_mode}'
     title += f' | Combined from {len(dance_phases_kde_all)} pieces'
     ax.set_title(title, pad=10)
-    ax.legend(loc='upper left', framealpha=0.4, fontsize=6)
+    
+    if legend_flag:
+        ax.legend(loc='upper left', framealpha=0.4, fontsize=6)
 
     return fig, ax
 

@@ -525,8 +525,8 @@ def extract_forward_cycle_videos_and_plots(
             continue
         
         # Trim trajectory data using frame numbers at 240fps
-        L_win = Lz[traj_start_frame:traj_end_frame]
-        R_win = Rz[traj_start_frame:traj_end_frame]
+        L_win = Lz[traj_start_frame:traj_end_frame] * 100    # *100 to make it cm
+        R_win = Rz[traj_start_frame:traj_end_frame] * 100    # *100 to make it cm
         t_win = times[traj_start_frame:traj_end_frame]
         
         # Check if we have valid trajectory data
@@ -578,7 +578,7 @@ def extract_forward_cycle_videos_and_plots(
         
         # Create figure and axis
         fig, ax = plt.subplots(figsize=figsize, dpi=dpi)
-        fig.tight_layout(pad=2.0) 
+        fig.tight_layout(pad=3.0) 
         
         # Calculate all subdivision times for the window
         all_subdiv_times = []
@@ -598,17 +598,17 @@ def extract_forward_cycle_videos_and_plots(
                 ax.axvline(subdiv_time, color=color, linestyle='--', linewidth=1, alpha=0.3) #subdivision color
         
         # Plot trajectories
-        ax.plot(t_win, L_win, '-', color='blue', alpha=0.5, label='Left Foot', linewidth=1.5)
-        ax.plot(t_win, R_win, '-', color='red', alpha=0.5, label='Right Foot', linewidth=1.5)
+        ax.plot(t_win, L_win, '-', color='blue', alpha=0.5, label='Left Foot', linewidth=3.5)   
+        ax.plot(t_win, R_win, '-', color='red', alpha=0.5, label='Right Foot', linewidth=3.5)  
         
         # Plot foot onset markers
         for onset in left_times:
             idx = np.argmin(np.abs(t_win - onset))
-            ax.plot(onset, L_win[idx], 'o', color='blue', ms=6, alpha=0.8)
+            ax.plot(onset, L_win[idx], 'o', color='blue', ms=10, alpha=0.8)
         
         for onset in right_times:
             idx = np.argmin(np.abs(t_win - onset))
-            ax.plot(onset, R_win[idx], 'o', color='red', ms=6, alpha=0.8)
+            ax.plot(onset, R_win[idx], 'o', color='red', ms=10, alpha=0.8)
         
         # Set y-axis limits with safety checks
         try:
@@ -628,7 +628,7 @@ def extract_forward_cycle_videos_and_plots(
         
         # Set up the plot with scaled x-axis
         ax.set_xlabel(f'Beats span')
-        ax.set_ylabel('Foot Position')
+        ax.set_ylabel('Feet', fontsize=12)
         ax.set_title(f'{file_name} | Window:{start_time:.2f}s - {end_time:.2f}s: {start_time:.2f}s')
         ax.grid(True, alpha=0.3)
         
@@ -658,8 +658,10 @@ def extract_forward_cycle_videos_and_plots(
             return v_playhead,
         
         # Create animation frames at 24fps  
-        plot_n_frames = int((end_time - start_time) * 24)
-        frames = np.linspace(start_time, end_time, plot_n_frames)
+        # plot_n_frames = int((end_time - start_time) * 24)
+        # frames = np.linspace(start_time, end_time, plot_n_frames)
+        
+        frames = np.arange(start_time, end_time, 1/24)   # New 06 June 2025
         anim = animation.FuncAnimation(
             fig, update, frames=frames,
             interval=1000/24,  # 24fps

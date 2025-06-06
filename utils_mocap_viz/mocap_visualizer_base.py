@@ -7,6 +7,32 @@ import pandas as pd
 from scipy.spatial.transform import Rotation
 from bvh_converter import bvh_mod
 
+skeleton_indices = {
+    'Hips': 0,
+    'Chest': 1,
+    'Chest2': 2,
+    'Chest3': 3,
+    'Chest4': 4,
+    'Neck': 5,
+    'Head': 6,
+    'RightCollar': 7,
+    'RightShoulder': 8,
+    'RightElbow': 9,
+    'RightWrist': 10,
+    'LeftCollar': 11,
+    'LeftShoulder': 12,
+    'LeftElbow': 13,
+    'LeftWrist': 14,
+    'RightHip': 15,
+    'RightKnee': 16,
+    'RightAnkle': 17,
+    'RightToe': 18,
+    'LeftHip': 19,
+    'LeftKnee': 20,
+    'LeftAnkle': 21,
+    'LeftToe': 22
+}
+
 class MocapVisualizerBase:
     def __init__(self, bvh_file, debug=False):
         self.debug = debug
@@ -115,7 +141,7 @@ class MocapVisualizerBase:
         
         # Create label to index mapping for faster lookup
         self.label_to_idx = {label: idx for idx, label in enumerate(self.labels)}
-        
+
         # Get reference position from first frame
         self.reference_pos = self.get_marker_position('Hips', 0)
         if self.reference_pos is None:
@@ -183,6 +209,11 @@ class MocapVisualizerBase:
             elif self.debug:
                 print(f"Warning: Missing connection {start} -> {end} in frame {frame}")
         
+        # Debug print to see the actual point indices
+        print("\nPoint indices in skeleton:")
+        for label, idx in point_indices.items():
+            print(f"{label}: {idx}")
+        
         if points:
             points = np.array(points)
             
@@ -211,7 +242,7 @@ class MocapVisualizerBase:
             print(f"Warning: No valid skeleton built for frame {frame}")
         return False
     
-    def generate_video(self, start_time=0, end_time=None, output_file="animation.mp4", output_fps=30, video_size=(1920, 1080), show_info=True):
+    def generate_video(self, start_time=0, end_time=None, output_file="animation.mp4", output_fps=24, video_size=(1920, 1080), show_info=True):
         """Generate an MP4 video of the animation"""
         try:
             # Convert times to frames
@@ -238,15 +269,27 @@ class MocapVisualizerBase:
             
             # Initialize the first frame
             if self.build_skeleton(start_frame):
+                
+                print("\nSkeleton Information:")
+                print("Number of points:", len(self.skeleton.points))   
+                # Print information about the connections
+                print("\nConnection Information:")
+                print("Number of lines:", len(self.skeleton.lines))
+
+                print("\nActual points in skeleton:")
+                for i, point in enumerate(self.skeleton.points):
+                    print(f"Index {i}: {point}")
+                    
                 # Add skeleton lines first (black)
                 self.plotter.add_mesh(self.skeleton, color='black', line_width=5, render_lines_as_tubes=True)
-                
                 # Then add marker points (red)
-                self.plotter.add_points(self.skeleton.points, color='red', point_size=10)
+                self.plotter.add_points(self.skeleton.points, color='red', point_size=15)
                 
                 # Add frame number and time if show_info is True
                 if show_info:
-                    self.plotter.add_text(f'Frame: {start_frame}/{self.total_frames}\nTime: {start_time:.2f}s\nFps: {output_fps:.1f}', position='upper_left')
+                    self.plotter.add_text(f'Time: {start_time:.0f}s', position='upper_left')
+                    # self.plotter.add_text(f'Frame: {start_frame}/{self.total_frames}\nTime: {start_time:.2f}s\nFps: {output_fps:.1f}', position='upper_left')
+                
                 
                 # Calculate frame step based on input and output FPS
                 frame_step = max(1, int(self.frame_rate / output_fps))
@@ -257,12 +300,32 @@ class MocapVisualizerBase:
                     if self.build_skeleton(frame):
                         self.plotter.clear()
                         self.plotter.add_mesh(self.skeleton, color='black', line_width=5, render_lines_as_tubes=True)
-                        self.plotter.add_points(self.skeleton.points, color='red', point_size=10)
+                        self.plotter.add_points(self.skeleton.points, color='black', point_size=12)
+                        
+                        # ---------------------------------------- Skeleton Marker Coloring ----------------------------------------
+                        
+                        # Define marker colors and sizes
+                        marker_colors = {
+                            'Hips': ('lightgreen', 25),
+                            'LeftAnkle': ('blue', 25),
+                            'LeftToe': ('blue', 25),
+                            'RightAnkle': ('red', 25),
+                            'RightToe': ('red', 25)
+                        }
+                        
+                        # Add colored markers using both dictionaries
+                        for marker, (color, size) in marker_colors.items():
+                            self.plotter.add_points(self.skeleton.points[skeleton_indices[marker]:skeleton_indices[marker]+1], 
+                                                color=color, 
+                                                point_size=size)
+                        
+                        # ---------------------------------------- Skeleton Marker Coloring ----------------------------------------
                         
                         # Update frame number and time if show_info is True
                         if show_info:
                             current_time = frame / self.frame_rate
-                            self.plotter.add_text(f'Frame: {frame}/{self.total_frames}\nTime: {current_time:.2f}s', position='upper_left')
+                            self.plotter.add_text(f'Time: {current_time:.0f}s', position='upper_left')
+                            # self.plotter.add_text(f'Frame: {frame}/{self.total_frames}\nTime: {current_time:.2f}s', position='upper_left')
                         
                         # Save frame to temporary directory with specified size
                         frame_path = os.path.join(temp_dir, f"frame_{frame_count:06d}.png")

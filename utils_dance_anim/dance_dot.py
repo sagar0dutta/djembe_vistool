@@ -160,8 +160,8 @@ def animate_dance_phase_analysis(
     ax.scatter(phases, window_positions, alpha=0.5, color=color, s=5)
 
     # Scale KDE to be between -0.5 and 0, starting from bottom
-    kde_scaled = -0.5 + (0.5 * kde_h / np.max(kde_h))
-    ax.fill_between(kde_xx, -0.5, kde_scaled, alpha=0.3, color=kde_color)
+    kde_scaled = -0.6 + (0.5 * kde_h / np.max(kde_h))
+    ax.fill_between(kde_xx, -0.6, kde_scaled, alpha=0.3, color=kde_color)
 
     ax.set_xlabel('Beat Span')    # Normalized metric cycle# 
     ax.set_ylabel('Relative Position in Window')
@@ -172,7 +172,7 @@ def animate_dance_phase_analysis(
     ax.set_xticks(xticks)  
     ax.set_xticklabels([1, 2, 3, 4, 5])
     
-    ax.set_ylim(-0.55, 1.0)
+    ax.set_ylim(-0.65, 1.0)
     yticks = np.arange(0, 1.1, 0.2)
     ax.set_yticks(yticks)
     ax.grid(True, alpha=0.3)
@@ -187,7 +187,7 @@ def animate_dance_phase_analysis(
         else:
             ax.vlines(xpos, ymin, ymax, color=get_subdiv_color(subdiv), linestyle='--', linewidth=1, alpha=0.3)
 
-    playhead, = ax.plot([0, 0], [-0.55, 1.0], color='orange', lw=1.5, alpha=0.7, linestyle='-')
+    playhead, = ax.plot([0, 0], [-0.65, 1.0], color='orange', lw=1.5, alpha=0.7, linestyle='-')
     h_playhead, = ax.plot([0, 1], [0, 0], color='orange', lw=1.5, alpha=0.7, linestyle='-')
 
     def find_phase(t):
@@ -305,3 +305,151 @@ def save_dance_phase_plot(
     else:
         print("Error: save_dir must be provided")
         plt.close(fig)
+        
+        
+        
+######## Animate the dance dot plot with a moving playhead within a user-defined window #########
+
+
+def animate_dance_phase_analysis_with_user_window(
+    file_name, 
+    W_start,           # Full window start
+    W_end,             # Full window end
+    user_start,        # Animation start time
+    user_end,          # Animation end time
+    cycles_csv_path, 
+    dance_csv_path,
+    figsize=(10, 3), 
+    dpi=100, 
+    save_dir=None
+    ):
+    """
+    Animate the phase analysis plot for dance onsets with a moving playhead within a user-defined window.
+    
+    Args:
+        file_name: Base name of the file to analyze
+        W_start: Start of full analysis window
+        W_end: End of full analysis window
+        user_start: Start time for animation playhead
+        user_end: End time for animation playhead
+        cycles_csv_path: Path to the cycles CSV file
+        dance_csv_path: Path to the dance CSV file
+        figsize: Figure size in inches
+        dpi: Dots per inch for the figure
+        save_dir: Directory to save the animation in
+    """
+    # Validate user window is within full window
+    if not (W_start <= user_start <= user_end <= W_end):
+        raise ValueError("User window must be within the full window range")
+
+    print(f"Generating animation for dance dot plot for {file_name}")
+    print(f"Full window: {W_start:.1f}s - {W_end:.1f}s")
+    print(f"Animation window: {user_start:.1f}s - {user_end:.1f}s")
+    
+    cycles = load_cycles(cycles_csv_path)
+    phases, window_positions, kde_xx, kde_h = analyze_dance_phases_no_plot(
+        cycles_csv_path, dance_csv_path, W_start, W_end
+    )
+    if phases is None:
+        print("Not enough data for animation.")
+        return
+
+    fig, ax = plt.subplots(figsize=figsize, dpi=dpi)
+    color = 'purple'
+    kde_color = 'purple'
+
+    # Plot scatter points (above zero)
+    ax.scatter(phases, window_positions, alpha=0.5, color=color, s=14)   # Scatter plot
+
+    # Scale KDE to be between -0.5 and 0, starting from bottom
+    kde_scaled = -0.6 + (0.5 * kde_h / np.max(kde_h))
+    ax.fill_between(kde_xx, -0.6, kde_scaled, alpha=0.3, color=kde_color)
+
+    ax.set_xlabel('4-beat cycle span')
+    ax.set_ylabel('Relative Position in Window')
+    ax.set_title(f'File: {file_name} | Window: {W_start:.1f}s - {W_end:.1f}s | Onset: Dance')
+
+    ax.set_xlim(-0.1, 1)
+    xticks = [0, 0.25, 0.5, 0.75, 1]
+    ax.set_xticks(xticks)  
+    ax.set_xticklabels([1, 2, 3, 4, 5])
+    
+    ax.set_ylim(-0.65, 1.0)
+    yticks = np.arange(0, 1.1, 0.2)
+    ax.set_yticks(yticks)
+    ax.set_yticklabels([])  # comment to show y-axis labels
+    
+    # ax.grid(True, alpha=0.3)
+    
+    # Draw vertical lines at each subdivision i/12
+    ymin, ymax = ax.get_ylim()
+    for subdiv in range(1, 13):
+        xpos = (subdiv - 1) / 12
+        if subdiv in [1, 4, 7, 10]:
+            ax.vlines(xpos, ymin, ymax, color=get_subdiv_color(subdiv), 
+                     linestyle='-', linewidth=1.5, alpha=0.7)
+        else:
+            ax.vlines(xpos, ymin, ymax, color=get_subdiv_color(subdiv), 
+                     linestyle='--', linewidth=1, alpha=0.3)
+
+    playhead, = ax.plot([0, 0], [-0.65, 1.0], color='orange', lw=1.5, alpha=0.7, linestyle='-')
+    h_playhead, = ax.plot([0, 1], [0, 0], color='orange', lw=1.5, alpha=0.7, linestyle='-')
+
+    def find_phase(t):
+        idx = np.searchsorted(cycles, t)
+        if idx == 0 or idx >= len(cycles):
+            return None
+        c = idx - 1
+        L_c = cycles[c]
+        L_c1 = cycles[c + 1]
+        return (t - L_c) / (L_c1 - L_c)
+
+    def update(frame):
+        phase = find_phase(frame)
+        if phase is not None:
+            # Update vertical playhead
+            playhead.set_xdata([phase, phase])
+            
+            # Update horizontal playhead (normalized to full window)
+            y_pos = (frame - W_start) / (W_end - W_start)
+            h_playhead.set_ydata([y_pos, y_pos])
+            
+            # Update title with both windows and current time
+            ax.set_title(
+                f'File: {file_name} | Window: {user_start:.1f}s - {user_end:.1f}s | Onset: Feet | Time: {frame:.2f}s'
+                # f'File: {file_name}\n'
+                # f'Full window: {W_start:.1f}s - {W_end:.1f}s\n'
+                # f'Animation: {user_start:.1f}s - {user_end:.1f}s | Time: {frame:.2f}s'
+            )
+        return playhead, h_playhead,
+
+    # Create animation frames for user window only
+    print("\nCreating animation...")
+    frames = np.arange(user_start, user_end, 1/24)
+    print(f"Animation will have {len(frames)} frames")
+    print(f"Time range: {frames[0]:.2f}s - {frames[-1]:.2f}s")
+    
+    anim = animation.FuncAnimation(
+        fig, update, frames=frames,
+        interval=50, blit=True
+    )
+    plt.tight_layout()
+
+    if save_dir:
+        os.makedirs(save_dir, exist_ok=True)
+        save_filename = f"dance_{user_start:.2f}_{user_end:.2f}.mp4"
+        save_path = os.path.join(save_dir, save_filename)
+        print(f"\nSaving animation to: {save_path}")
+        try:
+            writer = animation.FFMpegWriter(fps=24, bitrate=2000)
+            anim.save(save_path, writer=writer)
+            plt.close(fig)
+            print("Animation saved successfully!")
+        except Exception as e:
+            print(f"Error saving animation: {str(e)}")
+            plt.close(fig)
+    else:
+        print("Error: save_dir must be provided")
+        plt.close(fig)
+    return anim
+

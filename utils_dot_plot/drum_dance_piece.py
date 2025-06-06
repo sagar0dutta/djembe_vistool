@@ -17,7 +17,7 @@ def plot_combined_drum_dance(piece_type,
                              figsize=(10, 6), 
                              dpi=200,
                              save_dir=None,
-                             ):
+                             legend_flag=True):
     """Create a single figure with two subplots: drum and dance"""
     
     # Create figure with two subplots
@@ -121,7 +121,9 @@ def plot_combined_drum_dance(piece_type,
 
     # Title for drum plot
     ax1.set_title(f'{piece_type} | {dance_mode} | Drum Onsets', pad=10)
-    ax1.legend(loc='upper left', framealpha=0.4, fontsize=6)
+    
+    if legend_flag:
+        ax1.legend(loc='upper left', framealpha=0.4, fontsize=6)
 
     # Plot dance data (bottom subplot)
     vertical_ranges = {
@@ -153,6 +155,10 @@ def plot_combined_drum_dance(piece_type,
         # Convert lists to numpy arrays
         phases = np.array(all_phases)
         y_scaled = np.array(all_y_scaled)
+        
+        # Normalize y_scaled values to fit within the vertical range
+        y_min, y_max = vertical_ranges[foot_type]
+        y_scaled = y_min + (y_scaled - np.min(y_scaled)) * (y_max - y_min) / (np.max(y_scaled) - np.min(y_scaled))
             
         # Plot scatter with single color for each foot
         ax2.scatter(phases * 400,
@@ -198,7 +204,9 @@ def plot_combined_drum_dance(piece_type,
 
     # Title for dance plot
     ax2.set_title(f'{piece_type} | {dance_mode} | Dance Onsets', pad=10)
-    ax2.legend(loc='upper left', framealpha=0.4, fontsize=6)
+    
+    if legend_flag:
+        ax2.legend(loc='upper left', framealpha=0.4, fontsize=6)
 
     # Save the figure
     save_mode_dir = os.path.join(save_dir, "drum_dance_kde_by_piece", dance_mode)

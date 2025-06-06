@@ -56,6 +56,11 @@ def analyze_phases_no_plot(cycles_csv_path, onsets_csv_path, onset_type, W_start
     
     return phases, window_positions, kde_xx, kde_h
 
+
+def animate_window_in_merged_phase_mode():
+    pass
+
+
 def animate_merged_phase_analysis(file_name, 
                                   W_start, 
                                   W_end, 
@@ -125,8 +130,8 @@ def animate_merged_phase_analysis(file_name,
             combined_h = combined_h / np.max(combined_h)
         
         # Scale KDE to be between -0.5 and 0, starting from bottom
-        kde_scaled = -0.5 + (0.5 * combined_h)
-        kde_plot = ax.fill_between(kde_xx, -0.5, kde_scaled, alpha=0.3, color='purple',
+        kde_scaled = -0.6 + (0.5 * combined_h)
+        kde_plot = ax.fill_between(kde_xx, -0.6, kde_scaled, alpha=0.3, color='purple',
                                  label='Combined density')
         kde_plots.append(kde_plot)
     
@@ -143,7 +148,7 @@ def animate_merged_phase_analysis(file_name,
     ax.set_xticks(xticks) 
     ax.set_xticklabels([1, 2, 3, 4, 5])
     
-    ax.set_ylim(-0.55, 1.0)
+    ax.set_ylim(-0.65, 1.0)
     yticks = np.arange(0, 1.1, 0.2)
     ax.set_yticks(yticks)
     
@@ -164,7 +169,7 @@ def animate_merged_phase_analysis(file_name,
         ax.legend(loc='upper left', framealpha=0.4, fontsize = 'xx-small')
     
     # Create playhead line
-    playhead, = ax.plot([0, 0], [-0.55, 1.0], color='orange', lw=1.5, alpha=0.7, linestyle='-')
+    playhead, = ax.plot([0, 0], [-0.65, 1.0], color='orange', lw=1.5, alpha=0.7, linestyle='-')
     # Create horizontal playhead line
     h_playhead, = ax.plot([0, 1], [0, 0], color='orange', lw=1.5, alpha=0.7, linestyle='-')
     
@@ -178,23 +183,33 @@ def animate_merged_phase_analysis(file_name,
         L_c1 = cycles[c + 1]
         return (t - L_c) / (L_c1 - L_c)
     
+    # Update function for animation -----------------------------------------------------------------
     def update(frame):
         """Update function for animation."""
-        phase = find_phase(frame)
+        phase = find_phase(frame)   # convert the current time (frame) into a phase value
+                                    # The phase represents where in the musical cycle we are ( 0 to 1)
+        
         if phase is not None:
-            # Update vertical playhead
-            playhead.set_xdata([phase, phase])
+            
+            playhead.set_xdata([phase, phase])  # Updates the vertical playhead line's position
+            
             # Update horizontal playhead position (normalized to 0-1)
+            # Calculates the normalized position (0 to 1) of the current time within the analysis window
+            # W_start and W_end define the time window being analyzed
+            # creates a value between 0 and 1 representing progress through the window
             y_pos = (frame - W_start) / (W_end - W_start)
-            h_playhead.set_ydata([y_pos, y_pos])
+            h_playhead.set_ydata([y_pos, y_pos])            # Updates the horizontal playhead line's position
+            
+            
             # Update title with current time
             ax.set_title(f'File: {file_name} | Window: {W_start:.1f}s - {W_end:.1f}s | Onset: Merged Drums | Time: {frame:.2f}s')
+        
         return playhead, h_playhead,
     
     # Create animation
     print("\nCreating animation...")
     # Only create frames within the analysis window
-    frames = np.arange(W_start, W_end, 1/24)  # 50ms steps
+    frames = np.arange(W_start, W_end, 1/24)  
     print(f"Animation will have {len(frames)} frames")
     print(f"Time range: {frames[0]:.2f}s - {frames[-1]:.2f}s")
     
@@ -236,3 +251,177 @@ def get_subdiv_color(subdiv):
     elif subdiv in [3, 6, 9, 12]:
         return 'red'
     return 'gray'
+
+
+########## Animate drum dot plot with a moving playhead within a user-defined window #########
+
+
+def animate_merged_phase_analysis_with_user_window(
+    file_name, 
+    W_start,           # Full window start (e.g., 20)
+    W_end,             # Full window end (e.g., 100)
+    user_start,        # Animation start time
+    user_end,          # Animation end time
+    cycles_csv_path, 
+    onsets_csv_path, 
+    figsize=(10, 6), 
+    dpi=100, 
+    save_dir=None, 
+    legend_flag=True
+):
+    """Animate the merged phase analysis plot with a moving playhead within a user-defined window.
+    
+    Args:
+        file_name: Base name of the file to analyze
+        W_start: Start of full analysis window (e.g., 20)
+        W_end: End of full analysis window (e.g., 100)
+        user_start: Start time for animation playhead
+        user_end: End time for animation playhead
+        cycles_csv_path: Path to the cycles CSV file
+        onsets_csv_path: Path to the onsets CSV file
+        figsize: Figure size in inches
+        dpi: Dots per inch for the figure
+        save_fname: Path to save the animation (MP4 format)
+        save_dir: Directory to save the animation in
+        legend_flag: Whether to show the legend
+    """
+    # Validate user window is within full window
+    if not (W_start <= user_start <= user_end <= W_end):
+        raise ValueError("User window must be within the full window range")
+
+    print(f"Generating animation for drum merged dot plot for {file_name}")
+    print(f"Full window: {W_start:.1f}s - {W_end:.1f}s")
+    print(f"Animation window: {user_start:.1f}s - {user_end:.1f}s")
+    
+    cycles = load_cycles(cycles_csv_path)
+    
+    # Create figure and axis
+    fig, ax = plt.subplots(figsize=figsize, dpi=dpi)
+    
+    # Plot each onset type
+    onset_types = ['Dun', 'J1', 'J2']
+    colors = ['blue', 'green', 'red']
+    scatter_plots = []
+    kde_plots = []
+    
+    # Initialize combined KDE
+    combined_h = None
+    kde_xx = None
+    
+    # Process each onset type for the FULL window
+    for onset_type, color in zip(onset_types, colors):
+        phases, window_positions, curr_kde_xx, curr_kde_h = analyze_phases_no_plot(
+            cycles_csv_path, onsets_csv_path, onset_type, W_start, W_end
+        )
+        
+        if phases is not None:
+            scatter = ax.scatter(phases, window_positions, alpha=0.5,   # Scatter plot
+                                 color=color, s=14, label=onset_type)
+            scatter_plots.append(scatter)
+            
+            if combined_h is None:
+                combined_h = curr_kde_h
+                kde_xx = curr_kde_xx
+            else:
+                combined_h += curr_kde_h
+    
+    # Plot combined KDE
+    if combined_h is not None:
+        if np.sum(combined_h) > 0:
+            combined_h = combined_h / np.max(combined_h)
+        kde_scaled = -0.6 + (0.5 * combined_h)
+        kde_plot = ax.fill_between(kde_xx, -0.6, kde_scaled, alpha=0.3, color='gray',
+                                 label='Combined density')
+        kde_plots.append(kde_plot)
+    
+    # Set up plot
+    xticks = [0, 0.25, 0.5, 0.75, 1]
+    ax.set_xticks(xticks)
+    ax.set_xticklabels([1, 2, 3, 4, 5])
+    ax.set_xlabel('4-beat cycle span')
+    ax.set_xlim(-0.1, 1.0)
+    
+    yticks = np.arange(0, 1.1, 0.2)
+    ax.set_yticks(yticks)
+    ax.set_yticklabels([])  # comment to show y-axis labels
+    ax.set_ylabel('Relative Position in Window')
+    ax.set_ylim(-0.65, 1.0)
+    
+    # Draw subdivision lines
+    ymin, ymax = ax.get_ylim()
+    for subdiv in range(1, 13):
+        xpos = (subdiv - 1) / 12
+        if subdiv in [1, 4, 7, 10]:
+            ax.vlines(xpos, ymin, ymax, color=get_subdiv_color(subdiv), 
+                     linestyle='-', linewidth=1.5, alpha=0.7)
+        else:
+            ax.vlines(xpos, ymin, ymax, color=get_subdiv_color(subdiv), 
+                     linestyle='--', linewidth=1, alpha=0.3)
+    
+    # ax.grid(True, alpha=0.3)
+    
+    if legend_flag:
+        ax.legend(loc='upper left', framealpha=0.4, fontsize='xx-small')
+    
+    # Create playheads
+    playhead, = ax.plot([0, 0], [-0.65, 1.0], color='orange', lw=1.5, alpha=0.7, linestyle='-')
+    h_playhead, = ax.plot([0, 1], [0, 0], color='orange', lw=1.5, alpha=0.7, linestyle='-')
+    
+    def find_phase(t):
+        """Find the phase for a given time t."""
+        idx = np.searchsorted(cycles, t)
+        if idx == 0 or idx >= len(cycles):
+            return None
+        c = idx - 1
+        L_c = cycles[c]
+        L_c1 = cycles[c + 1]
+        return (t - L_c) / (L_c1 - L_c)
+    
+    def update(frame):
+        """Update function for animation."""
+        phase = find_phase(frame)
+        
+        if phase is not None:
+            # Update vertical playhead
+            playhead.set_xdata([phase, phase])
+            
+            # Update horizontal playhead (normalized to user window)
+            y_pos = (frame - W_start) / (W_end - W_start)
+            h_playhead.set_ydata([y_pos, y_pos])
+            
+            # Update title with both windows and current time
+            ax.set_title( f'File: {file_name} | Window: {user_start:.1f}s - {user_end:.1f}s | Onset: Merged Drums | Time: {frame:.2f}s')
+        
+        return playhead, h_playhead,
+    
+    # Create animation frames for user window only
+    print("\nCreating animation...")
+    frames = np.arange(user_start, user_end, 1/24)
+    print(f"Animation will have {len(frames)} frames")
+    print(f"Time range: {frames[0]:.2f}s - {frames[-1]:.2f}s")
+    
+    anim = animation.FuncAnimation(
+        fig, update, frames=frames,
+        interval=50, blit=True
+    )
+    
+    plt.tight_layout()
+    
+    # Save animation if requested
+
+    if save_dir:
+        os.makedirs(save_dir, exist_ok=True)
+        save_fname = os.path.join(save_dir, f"drum_dot_merged_{user_start:.2f}_{user_end:.2f}.mp4")
+    
+    print(f"\nSaving animation to: {save_fname}")
+    try:
+        writer = animation.FFMpegWriter(fps=24, bitrate=2000)
+        anim.save(save_fname, writer=writer)
+        plt.close(fig)
+        print("Animation saved successfully!")
+    except Exception as e:
+        print(f"Error saving animation: {str(e)}")
+        plt.close(fig)
+
+    
+    return anim

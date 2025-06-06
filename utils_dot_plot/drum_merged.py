@@ -33,7 +33,7 @@ def plot_merged_stacked(file_name,
                        figsize=(10, 12),
                        dpi=100,
                        use_window=True,
-                       ):
+                       legend_flag=True):
     """Create a single plot showing merged analysis for Dun, J1, and J2
     with stacked, colored scatter and combined KDE."""
 
@@ -162,12 +162,14 @@ def plot_merged_stacked(file_name,
     ax.set_title(title, pad=10)
     
     # Add legend
-    ax.legend(loc='upper left', framealpha=0.4, fontsize=6)
+    if legend_flag:
+        ax.legend(loc='upper left', framealpha=0.4, fontsize=6)
 
     return fig, ax, drum_phases_kde
 
 
-def plot_combined_merged_stacked(piece_type, dance_mode, drum_phases_kde_all, figsize=(10, 3), dpi=200):
+def plot_combined_merged_stacked(piece_type, dance_mode, drum_phases_kde_all, 
+                                 figsize=(10, 3), dpi=200, legend_flag=True):
     """Create a single plot showing combined merged analysis for all pieces of a type"""
     
     # Set up single merged axes
@@ -272,7 +274,8 @@ def plot_combined_merged_stacked(piece_type, dance_mode, drum_phases_kde_all, fi
     ax.set_title(title, pad=10)
     
     # Add legend
-    ax.legend(loc='upper left', framealpha=0.4, fontsize=6)
+    if legend_flag:
+        ax.legend(loc='upper left', framealpha=0.4, fontsize=6)
 
     return fig, ax
 

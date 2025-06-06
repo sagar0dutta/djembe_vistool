@@ -150,7 +150,7 @@ def prepare_videos(
     
     # Generate all required views
     view_videos = {}
-    print(f"Generating Skeletonviews for {filename} | Window: {start_time:.1f}s - {end_time:.1f}s")
+    print(f"Generating Skeleton views for {filename} | Window: {start_time:.1f}s - {end_time:.1f}s")
     
     # Generate motion capture views
     for view in views_to_generate:
